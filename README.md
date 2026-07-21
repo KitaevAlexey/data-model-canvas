@@ -1,75 +1,123 @@
-# React + TypeScript + Vite
+# Data Model Canvas
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Интерактивный инструмент для визуального проектирования, анализа и документирования моделей данных. Создавайте ER-диаграммы из файлов, редактируйте их на холсте и экспортируйте в SQL, S2T или AI-промпты.
 
-Currently, two official plugins are available:
+**Живое демо:** [kitaevalexey.github.io/data-model-canvas](https://kitaevalexey.github.io/data-model-canvas)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Для кого
 
-## React Compiler
+- **Аналитики DWH / BI** — аудит и проектирование моделей данных
+- **Архитекторы данных** — быстрая валидация схем перед разработкой
+- **Консультанты** — проведение воркшопов с живым прототипированием
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Возможности
 
-## Expanding the ESLint configuration
+### Импорт моделей
+- **S2T** — текстовый формат описания схемы БД
+- **Excel** (.xlsx) — один лист на таблицу или все таблицы на одном листе
+- **CSV** — все таблицы в одном файле
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Редактирование
+- Перетаскивание таблиц по холсту
+- Масштабирование и панорамирование
+- Добавление, удаление, редактирование таблиц и колонок
+- Настройка первичных и внешних ключей
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Анализ и генерация
+- **Анализатор коллизий** — проверка на 5 типов ошибок
+- **Генератор тестовых данных** — INSERT-скрипты с умной генерацией значений
+- **SQL Helper** — шаблоны запросов на основе модели
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Экспорт
+- **DDL** — CREATE TABLE скрипты
+- **S2T** — текстовое описание модели
+- **AI Prompt** — структурированный промпт для генерации ETL/DML
+- **Excel** — единый файл со всеми таблицами
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Сохранение
+- Автосохранение в localStorage браузера
+- Восстановление при следующем открытии
 
-```
+## Форматы файлов
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### S2T (.s2t / .txt)
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Table: Customers
+  ID: int PK
+  Name: varchar(100)
+  Segment: varchar(50)
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Table: Orders
+  ID: int PK
+  CustomerID: int FK -> Customers.ID
+  OrderDate: date
+  Amount: decimal(10,2)
 
-```
+**Правила:**
+- Table: Имя — начало новой таблицы
+- Отступ + Колонка: Тип — колонка
+- PK — первичный ключ
+- FK -> Таблица.Колонка — внешний ключ
+
+### Excel (.xlsx)
+
+**Формат 1: Все таблицы на одном листе**
+
+| Table | Column Name | Data Type | Key | References |
+|-------|-------------|-----------|-----|------------|
+| Customers | ID | int | PK | |
+| Orders | CustomerID | int | FK | Customers.ID |
+
+**Формат 2: Один лист = одна таблица**
+
+Лист Customers:
+
+| Column Name | Data Type | Key | References |
+|-------------|-----------|-----|------------|
+| ID | int | PK | |
+| Name | varchar(100) | | |
+
+### CSV (.csv)
+
+Table,Column Name,Data Type,Key,References
+Customers,ID,int,PK,
+Customers,Name,varchar(100),,
+Orders,ID,int,PK,
+Orders,CustomerID,int,FK,Customers.ID
+
+## Быстрый старт
+
+1. Откройте [демо](https://kitaevalexey.github.io/data-model-canvas)
+2. Нажмите **Load Sample Model** для просмотра демо-модели
+3. Или **Import** → выберите ваш файл
+4. Редактируйте модель на холсте
+5. Экспортируйте результат
+
+## Примеры файлов
+
+Готовые файлы для тестирования находятся в папке examples/:
+- sample.s2t — текстовый формат
+- sample.csv — CSV формат
+- sample.xlsx — Excel формат
+
+## Разработка
+
+npm install
+npm run dev
+
+## Деплой
+
+npm run deploy
+
+## Технологии
+
+- React 19 + TypeScript
+- Vite
+- Tailwind CSS
+- SheetJS (xlsx)
+- PapaParse (csv)
+- GitHub Pages
+
+## Лицензия
+
+MIT

@@ -1,0 +1,20 @@
+Table: Customers
+  ID: int PK
+  Name: varchar(100)
+  Email: varchar(150)
+  Segment: varchar(50)
+  CreatedAt: date
+
+Table: Products
+  ID: int PK
+  Name: varchar(150)
+  Price: decimal(10,2)
+  Category: varchar(50)
+
+Table: Orders
+  ID: int PK
+  CustomerID: int FK -> Customers.ID
+  ProductID: int FK -> Products.ID
+  OrderDate: date
+  Quantity: int
+  TotalAmount: decimal(12,2)

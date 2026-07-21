@@ -1,0 +1,16 @@
+Table,Column Name,Data Type,Key,References
+Customers,ID,int,PK,
+Customers,Name,varchar(100),,
+Customers,Email,varchar(150),,
+Customers,Segment,varchar(50),,
+Customers,CreatedAt,date,,
+Products,ID,int,PK,
+Products,Name,varchar(150),,
+Products,Price,decimal(10,2),,
+Products,Category,varchar(50),,
+Orders,ID,int,PK,
+Orders,CustomerID,int,FK,Customers.ID
+Orders,ProductID,int,FK,Products.ID
+Orders,OrderDate,date,,
+Orders,Quantity,int,,
+Orders,TotalAmount,decimal(12,2),,
