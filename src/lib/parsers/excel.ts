@@ -16,21 +16,59 @@ export function parseExcel(data: ArrayBuffer): TableModel[] {
     if (!rows.length) continue
 
     const headerRow = rows[0].map((h) => normalizeHeader(String(h)))
-    const colNameIdx = headerRow.findIndex((h) => h === 'column name')
-    const typeIdx = headerRow.findIndex((h) => h === 'data type')
-    const keyIdx = headerRow.findIndex((h) => h === 'key')
-    const refIdx = headerRow.findIndex((h) => h === 'references')
+    
+    // Check if this sheet has a "Table" column → all tables on one sheet
+    const tableColIdx = headerRow.findIndex((h) => h === 'table')
+    
+    if (tableColIdx !== -1) {
+      // FORMAT: all tables on one sheet with "Table" column
+      const colNameIdx = headerRow.findIndex((h) => h === 'column name')
+      const typeIdx = headerRow.findIndex((h) => h === 'data type')
+      const keyIdx = headerRow.findIndex((h) => h === 'key')
+      const refIdx = headerRow.findIndex((h) => h === 'references')
 
-    if (colNameIdx === -1) continue
+      if (colNameIdx === -1) continue
 
-    const rawRows: RawColumnRow[] = rows.slice(1).map((row) => ({
-      columnName: String(row[colNameIdx] ?? ''),
-      dataType: typeIdx !== -1 ? String(row[typeIdx] ?? '') : '',
-      key: keyIdx !== -1 ? String(row[keyIdx] ?? '') : '',
-      references: refIdx !== -1 ? String(row[refIdx] ?? '') : '',
-    }))
+      // Group rows by table name
+      const byTable = new Map<string, RawColumnRow[]>()
+      const order: string[] = []
 
-    tables.push(buildTableFromRows(sheetName, rawRows))
+      for (const row of rows.slice(1)) {
+        const tableName = String(row[tableColIdx] ?? '').trim()
+        if (!tableName) continue
+        if (!byTable.has(tableName)) {
+          byTable.set(tableName, [])
+          order.push(tableName)
+        }
+        byTable.get(tableName)!.push({
+          columnName: String(row[colNameIdx] ?? ''),
+          dataType: typeIdx !== -1 ? String(row[typeIdx] ?? '') : '',
+          key: keyIdx !== -1 ? String(row[keyIdx] ?? '') : '',
+          references: refIdx !== -1 ? String(row[refIdx] ?? '') : '',
+        })
+      }
+
+      for (const name of order) {
+        tables.push(buildTableFromRows(name, byTable.get(name)!))
+      }
+    } else {
+      // FORMAT: sheet name = table name (original format)
+      const colNameIdx = headerRow.findIndex((h) => h === 'column name')
+      const typeIdx = headerRow.findIndex((h) => h === 'data type')
+      const keyIdx = headerRow.findIndex((h) => h === 'key')
+      const refIdx = headerRow.findIndex((h) => h === 'references')
+
+      if (colNameIdx === -1) continue
+
+      const rawRows: RawColumnRow[] = rows.slice(1).map((row) => ({
+        columnName: String(row[colNameIdx] ?? ''),
+        dataType: typeIdx !== -1 ? String(row[typeIdx] ?? '') : '',
+        key: keyIdx !== -1 ? String(row[keyIdx] ?? '') : '',
+        references: refIdx !== -1 ? String(row[refIdx] ?? '') : '',
+      }))
+
+      tables.push(buildTableFromRows(sheetName, rawRows))
+    }
   }
 
   return tables
@@ -39,20 +77,20 @@ export function parseExcel(data: ArrayBuffer): TableModel[] {
 export function generateExcel(tables: TableModel[]): ArrayBuffer {
   const workbook = XLSX.utils.book_new()
 
-  for (const table of tables) {
-    const rows = [
-      ['Column Name', 'Data Type', 'Key', 'References'],
-      ...table.columns.map((c) => [
+  const rows = [
+    ['Table', 'Column Name', 'Data Type', 'Key', 'References'],
+    ...tables.flatMap((table) =>
+      table.columns.map((c) => [
+        table.name,
         c.name,
         c.type,
         c.isPK ? 'PK' : c.isFK ? 'FK' : '',
         c.isFK && c.refTable && c.refColumn ? `${c.refTable}.${c.refColumn}` : '',
-      ]),
-    ]
-    const sheet = XLSX.utils.aoa_to_sheet(rows)
-    const safeName = table.name.slice(0, 31) || 'Table'
-    XLSX.utils.book_append_sheet(workbook, sheet, safeName)
-  }
+      ])
+    ),
+  ]
+  const sheet = XLSX.utils.aoa_to_sheet(rows)
+  XLSX.utils.book_append_sheet(workbook, sheet, 'Tables')
 
   return XLSX.write(workbook, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer
 }
