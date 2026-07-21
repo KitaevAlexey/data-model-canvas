@@ -95,10 +95,10 @@ Orders,CustomerID,int,FK,Customers.ID
 
 ## Примеры файлов
 
-Готовые файлы для тестирования находятся в папке examples/:
-- sample.s2t — текстовый формат
-- sample.csv — CSV формат
-- sample.xlsx — Excel формат
+Готовые файлы для тестирования находятся в папке [examples/](examples/):
+- [sample.s2t](examples/sample.s2t)
+- [sample.csv](examples/sample.csv)
+- [sample.xlsx](examples/sample.xlsx)
 
 ## Разработка
 
@@ -108,6 +108,11 @@ npm run dev
 ## Деплой
 
 npm run deploy
+
+## Ссылки
+
+- [Живое демо](https://kitaevalexey.github.io/data-model-canvas)
+- [Репозиторий на GitHub](https://github.com/KitaevAlexey/data-model-canvas)
 
 ## Технологии
 
