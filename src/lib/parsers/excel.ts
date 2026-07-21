@@ -17,8 +17,11 @@ export function parseExcel(data: ArrayBuffer): TableModel[] {
 
     const headerRow = rows[0].map((h) => normalizeHeader(String(h)))
     
+    console.log('Excel headers:', headerRow)
+    
     // Check if this sheet has a "Table" column → all tables on one sheet
     const tableColIdx = headerRow.findIndex((h) => h === 'table')
+    console.log('Table column index:', tableColIdx)
     
     if (tableColIdx !== -1) {
       // FORMAT: all tables on one sheet with "Table" column
@@ -27,9 +30,10 @@ export function parseExcel(data: ArrayBuffer): TableModel[] {
       const keyIdx = headerRow.findIndex((h) => h === 'key')
       const refIdx = headerRow.findIndex((h) => h === 'references')
 
+      console.log('Column indexes:', { colNameIdx, typeIdx, keyIdx, refIdx })
+
       if (colNameIdx === -1) continue
 
-      // Group rows by table name
       const byTable = new Map<string, RawColumnRow[]>()
       const order: string[] = []
 
@@ -48,11 +52,13 @@ export function parseExcel(data: ArrayBuffer): TableModel[] {
         })
       }
 
+      console.log('Found tables:', order)
+
       for (const name of order) {
         tables.push(buildTableFromRows(name, byTable.get(name)!))
       }
     } else {
-      // FORMAT: sheet name = table name (original format)
+      // FORMAT: sheet name = table name
       const colNameIdx = headerRow.findIndex((h) => h === 'column name')
       const typeIdx = headerRow.findIndex((h) => h === 'data type')
       const keyIdx = headerRow.findIndex((h) => h === 'key')
@@ -71,6 +77,7 @@ export function parseExcel(data: ArrayBuffer): TableModel[] {
     }
   }
 
+  console.log('Total parsed tables:', tables.length)
   return tables
 }
 
