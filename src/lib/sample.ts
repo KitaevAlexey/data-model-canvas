@@ -23,7 +23,8 @@ export function buildSampleModel(): TableModel[] {
     tbl('FactSales', [
       col('SaleID', 'int', { isPK: true }),
       col('DateID', 'int', { isFK: true, refTable: 'DimDate', refColumn: 'DateID' }),
-      col('CustomerID', 'int', { isFK: true, refTable: 'DimCustomer', refColumn: 'CustomerID' }),
+      // ОШИБКА 1: Тип varchar не совпадает с int в DimCustomer
+      col('CustomerID', 'varchar(50)', { isFK: true, refTable: 'DimCustomer', refColumn: 'CustomerID' }),
       col('ProductID', 'int', { isFK: true, refTable: 'DimProduct', refColumn: 'ProductID' }),
       col('StoreID', 'int', { isFK: true, refTable: 'DimStore', refColumn: 'StoreID' }),
       col('PromotionID', 'int', { isFK: true, refTable: 'DimPromotion', refColumn: 'PromotionID' }),
@@ -32,7 +33,7 @@ export function buildSampleModel(): TableModel[] {
       col('Amount', 'decimal(12,2)'),
     ]),
 
-    // === ИЗМЕРЕНИЯ 1-ГО УРОВНЯ (ссылаются на Факт) ===
+    // === ИЗМЕРЕНИЯ 1-ГО УРОВНЯ ===
     tbl('DimDate', [
       col('DateID', 'int', { isPK: true }),
       col('Date', 'date'),
@@ -41,22 +42,25 @@ export function buildSampleModel(): TableModel[] {
       col('Month', 'int'),
     ]),
     tbl('DimCustomer', [
-      col('CustomerID', 'int', { isPK: true }),
+      col('CustomerID', 'int', { isPK: true }), // Здесь int
       col('FullName', 'varchar(150)'),
       col('Email', 'varchar(100)'),
-      col('RegionID', 'int', { isFK: true, refTable: 'DimRegion', refColumn: 'RegionID' }), // Ссылка на другое измерение
+      col('RegionID', 'int', { isFK: true, refTable: 'DimRegion', refColumn: 'RegionID' }),
     ]),
     tbl('DimProduct', [
       col('ProductID', 'int', { isPK: true }),
       col('ProductName', 'varchar(150)'),
       col('Price', 'decimal(10,2)'),
-      col('CategoryID', 'int', { isFK: true, refTable: 'DimCategory', refColumn: 'CategoryID' }), // Ссылка на другое измерение
+      col('CategoryID', 'int', { isFK: true, refTable: 'DimCategory', refColumn: 'CategoryID' }),
     ]),
+    
+    // ОШИБКА 2: В таблице DimStore отсутствует Primary Key (isPK: true)
     tbl('DimStore', [
-      col('StoreID', 'int', { isPK: true }),
+      col('StoreID', 'int'), 
       col('StoreName', 'varchar(100)'),
       col('City', 'varchar(50)'),
     ]),
+    
     tbl('DimPromotion', [
       col('PromotionID', 'int', { isPK: true }),
       col('PromotionName', 'varchar(100)'),
@@ -67,7 +71,7 @@ export function buildSampleModel(): TableModel[] {
       col('MethodName', 'varchar(50)'),
     ]),
 
-    // === ИЗМЕРЕНИЯ 2-ГО УРОВНЯ (ссылаются на другие Измерения) ===
+    // === ИЗМЕРЕНИЯ 2-ГО УРОВНЯ ===
     tbl('DimRegion', [
       col('RegionID', 'int', { isPK: true }),
       col('RegionName', 'varchar(100)'),
