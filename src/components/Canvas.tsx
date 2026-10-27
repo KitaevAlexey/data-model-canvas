@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, forwardRef, useImperativeHandle } from 'react'
 import {
   ReactFlow,
   Background,
@@ -6,10 +6,15 @@ import {
   MiniMap,
   useNodesState,
   useEdgesState,
+  useReactFlow,
+  ReactFlowProvider,
+  getNodesBounds,
+  getViewportForBounds,
   type Node,
   type Edge,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
+import { toPng } from 'html-to-image'
 
 import type { TableModel, EdgeType, LayoutState } from '../lib/types'
 import TableNode from './TableNode'
@@ -29,10 +34,14 @@ interface CanvasProps {
   onImportClick: (format: 's2t' | 'excel' | 'csv') => void
 }
 
+export interface CanvasRef {
+  exportPng: () => void
+}
+
 const nodeTypes = { table: TableNode }
 const edgeTypes = { editable: EditableEdge }
 
-export default function Canvas({
+const CanvasInner = forwardRef<CanvasRef, CanvasProps>(({
   tables,
   layout,
   selectedId,
@@ -44,13 +53,49 @@ export default function Canvas({
   highlightedEdgeKeys,
   onLoadSample,
   onImportClick,
-}: CanvasProps) {
+}, ref) => {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
+  const { getNodes } = useReactFlow()
+
+  // Экспорт в PNG
+  useImperativeHandle(ref, () => ({
+    exportPng: () => {
+      const nodesBounds = getNodesBounds(getNodes())
+      // Делаем отступы вокруг схемы, чтобы она не обрезалась
+      const padding = 100
+      const width = nodesBounds.width + padding * 2
+      const height = nodesBounds.height + padding * 2
+
+      // Рассчитываем viewport, чтобы все таблицы влезли в кадр
+      const viewport = getViewportForBounds(nodesBounds, width, height, 0.5, 2)
+
+      const viewportElement = document.querySelector('.react-flow__viewport') as HTMLElement
+      if (!viewportElement) return
+
+      toPng(viewportElement, {
+        backgroundColor: '#F8FAFC',
+        width: width,
+        height: height,
+        style: {
+          width: `${width}px`,
+          height: `${height}px`,
+          transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
+        },
+      }).then((dataUrl) => {
+        const a = document.createElement('a')
+        a.href = dataUrl
+        a.download = 'diagram.png'
+        a.click()
+      }).catch((err) => {
+        console.error('Ошибка экспорта PNG:', err)
+        window.alert('Не удалось сохранить изображение.')
+      })
+    }
+  }))
 
   useEffect(() => {
     const newNodes: Node[] = tables.map((t) => {
-      // Берем координаты из раскладки текущей вкладки, либо дефолтные
       const pos = layout.positions[t.id] || { x: t.x, y: t.y }
       return {
         id: t.id,
@@ -70,7 +115,6 @@ export default function Canvas({
             const edgeKey = `${t.id}:${c.id}`
             const isError = highlightedEdgeKeys.has(edgeKey)
             
-            // --- ЛОГИКА ВЫБОРА ПОРТА ---
             const posT = layout.positions[t.id] || { x: t.x, y: t.y }
             const posTarget = layout.positions[target.id] || { x: target.x, y: target.y }
             const dx = posTarget.x - posT.x
@@ -86,7 +130,6 @@ export default function Canvas({
               if (dy > 0) { sourceHandle = 'source-bottom'; targetHandle = 'target-top' }
               else { sourceHandle = 'source-top'; targetHandle = 'target-bottom' }
             }
-            // ---------------------------
 
             newEdges.push({
               id: edgeKey,
@@ -97,7 +140,7 @@ export default function Canvas({
               type: 'editable',
               data: {
                 edgeType,
-                bendY: layout.edgeBends[edgeKey], // Берем изгиб из раскладки
+                bendY: layout.edgeBends[edgeKey],
                 onBendChange: onEdgeBendChange,
               },
               style: {
@@ -172,4 +215,12 @@ export default function Canvas({
       </ReactFlow>
     </div>
   )
-}
+})
+
+const Canvas = forwardRef<CanvasRef, CanvasProps>((props, ref) => (
+  <ReactFlowProvider>
+    <CanvasInner {...props} ref={ref} />
+  </ReactFlowProvider>
+))
+
+export default Canvas

@@ -8,6 +8,7 @@ interface TopBarProps {
   onExportS2T: () => void
   onExportAIPrompt: () => void
   onExportExcel: () => void
+  onExportPNG: () => void // <-- Новый проп
   onClearCanvas: () => void
   onToggleSidebar: () => void
 }
@@ -20,6 +21,7 @@ export default function TopBar({
   onExportS2T,
   onExportAIPrompt,
   onExportExcel,
+  onExportPNG,
   onClearCanvas,
   onToggleSidebar,
 }: TopBarProps) {
@@ -83,6 +85,7 @@ export default function TopBar({
             <button className="block w-full px-3 py-2 text-left text-[14px] hover:bg-slate-50" onClick={() => { onExportS2T(); setExportOpen(false) }}>Экспорт S2T</button>
             <button className="block w-full px-3 py-2 text-left text-[14px] hover:bg-slate-50" onClick={() => { onExportAIPrompt(); setExportOpen(false) }}>Экспорт AI-промпта</button>
             <button className="block w-full px-3 py-2 text-left text-[14px] hover:bg-slate-50" onClick={() => { onExportExcel(); setExportOpen(false) }}>Экспорт Excel</button>
+            <button className="block w-full px-3 py-2 text-left text-[14px] hover:bg-slate-50 font-medium text-blue-600" onClick={() => { onExportPNG(); setExportOpen(false) }}>Экспорт PNG (Схема)</button>
           </div>
         )}
       </div>
@@ -130,6 +133,7 @@ export default function TopBar({
             <button className="block w-full px-3 py-2 text-left text-[14px] hover:bg-slate-50" onClick={() => { onExportS2T(); setMobileMenuOpen(false) }}>S2T</button>
             <button className="block w-full px-3 py-2 text-left text-[14px] hover:bg-slate-50" onClick={() => { onExportAIPrompt(); setMobileMenuOpen(false) }}>AI-промпт</button>
             <button className="block w-full px-3 py-2 text-left text-[14px] hover:bg-slate-50" onClick={() => { onExportExcel(); setMobileMenuOpen(false) }}>Excel</button>
+            <button className="block w-full px-3 py-2 text-left text-[14px] font-medium text-blue-600 hover:bg-slate-50" onClick={() => { onExportPNG(); setMobileMenuOpen(false) }}>PNG (Схема)</button>
             <div className="mt-1 border-t border-slate-200"></div>
             <a href="https://github.com/KitaevAlexey/data-model-canvas" target="_blank" rel="noopener noreferrer" className="block w-full px-3 py-2 text-left text-[14px] text-slate-700 hover:bg-slate-50">GitHub ↗</a>
             <div className="border-t border-slate-200 px-3 py-2">

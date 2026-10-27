@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import TopBar from './components/TopBar'
 import Sidebar from './components/Sidebar'
-import Canvas from './components/Canvas'
+import Canvas, { type CanvasRef } from './components/Canvas'
 import DetailPanel from './components/DetailPanel'
 import DiagramTabs from './components/DiagramTabs'
 import CollisionsModal from './components/modals/CollisionsModal'
@@ -36,6 +36,7 @@ export default function App() {
   const [edgeType, setEdgeType] = useState<EdgeType>('bezier')
   const [activeTab, setActiveTab] = useState<string>('overview')
   const hasLoaded = useRef(false)
+  const canvasRef = useRef<CanvasRef>(null)
 
   useEffect(() => {
     const stored = loadModel()
@@ -48,6 +49,14 @@ export default function App() {
     saveModel(model)
   }, [model])
 
+  // Следим, чтобы активная вкладка не "сломалась", если таблицу удалили
+  useEffect(() => {
+    if (activeTab !== 'overview' && !model.tables.some(t => t.name === activeTab)) {
+      setActiveTab('overview')
+    }
+  }, [model.tables, activeTab])
+
+  // Фильтруем таблицы для текущей вкладки
   const activeTables = useMemo(() => {
     if (activeTab === 'overview') return model.tables
 
@@ -55,10 +64,13 @@ export default function App() {
     if (!factTable) return model.tables
 
     const relevantNames = new Set<string>([factTable.name])
+    
+    // 1-й уровень (прямые измерения)
     factTable.columns.forEach(c => {
       if (c.isFK && c.refTable) relevantNames.add(c.refTable)
     })
     
+    // 2-й уровень (снежинка)
     model.tables.forEach(t => {
       if (relevantNames.has(t.name)) {
         t.columns.forEach(c => {
@@ -118,7 +130,7 @@ export default function App() {
           tables: laidOut,
           layouts: {
             ...prev.layouts,
-            overview: { positions, edgeBends: {} } // Перезаписываем обзор
+            overview: { positions, edgeBends: {} }
           }
         }))
         setActiveTab('overview')
@@ -127,32 +139,56 @@ export default function App() {
     })
   }, [])
 
-  const handleImportS2T = useCallback((file: File) => { /* ... без изменений ... */ 
-    const reader = new FileReader()
-    reader.onload = () => {
-      try { applyImportedTables(parseS2T(String(reader.result ?? ''))) } 
-      catch (err) { window.alert('Ошибка S2T') }
-    }
-    reader.readAsText(file)
-  }, [applyImportedTables])
+  const handleImportS2T = useCallback(
+    (file: File) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        try {
+          const tables = parseS2T(String(reader.result ?? ''))
+          applyImportedTables(tables)
+        } catch (err) {
+          console.error('S2T parse error:', err)
+          window.alert('Не удалось разобрать S2T-файл. Проверьте формат.')
+        }
+      }
+      reader.readAsText(file)
+    },
+    [applyImportedTables]
+  )
 
-  const handleImportExcel = useCallback((file: File) => { /* ... без изменений ... */ 
-    const reader = new FileReader()
-    reader.onload = () => {
-      try { applyImportedTables(parseExcel(reader.result as ArrayBuffer)) } 
-      catch (err) { window.alert('Ошибка Excel') }
-    }
-    reader.readAsArrayBuffer(file)
-  }, [applyImportedTables])
+  const handleImportExcel = useCallback(
+    (file: File) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        try {
+          const tables = parseExcel(reader.result as ArrayBuffer)
+          applyImportedTables(tables)
+        } catch (err) {
+          console.error('Excel parse error:', err)
+          window.alert('Не удалось разобрать Excel-файл. Проверьте формат.')
+        }
+      }
+      reader.readAsArrayBuffer(file)
+    },
+    [applyImportedTables]
+  )
 
-  const handleImportCSV = useCallback((file: File) => { /* ... без изменений ... */ 
-    const reader = new FileReader()
-    reader.onload = () => {
-      try { applyImportedTables(parseCSV(String(reader.result ?? ''))) } 
-      catch (err) { window.alert('Ошибка CSV') }
-    }
-    reader.readAsText(file)
-  }, [applyImportedTables])
+  const handleImportCSV = useCallback(
+    (file: File) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        try {
+          const tables = parseCSV(String(reader.result ?? ''))
+          applyImportedTables(tables)
+        } catch (err) {
+          console.error('CSV parse error:', err)
+          window.alert('Не удалось разобрать CSV-файл. Проверьте формат.')
+        }
+      }
+      reader.readAsText(file)
+    },
+    [applyImportedTables]
+  )
 
   const handleLoadSample = useCallback(async () => {
     const laidOut = await layoutGrid(buildSampleModel())
@@ -166,19 +202,22 @@ export default function App() {
     setActiveTab('overview')
   }, [])
 
-  const handleImportClick = useCallback((format: 's2t' | 'excel' | 'csv') => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = format === 's2t' ? '.s2t,.txt' : format === 'excel' ? '.xlsx' : '.csv'
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0]
-      if (!file) return
-      if (format === 's2t') handleImportS2T(file)
-      else if (format === 'excel') handleImportExcel(file)
-      else handleImportCSV(file)
-    }
-    input.click()
-  }, [handleImportS2T, handleImportExcel, handleImportCSV])
+  const handleImportClick = useCallback(
+    (format: 's2t' | 'excel' | 'csv') => {
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.accept = format === 's2t' ? '.s2t,.txt' : format === 'excel' ? '.xlsx' : '.csv'
+      input.onchange = (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0]
+        if (!file) return
+        if (format === 's2t') handleImportS2T(file)
+        else if (format === 'excel') handleImportExcel(file)
+        else handleImportCSV(file)
+      }
+      input.click()
+    },
+    [handleImportS2T, handleImportExcel, handleImportCSV]
+  )
 
   const handleMoveTable = useCallback((id: string, x: number, y: number) => {
     setModel((m) => ({
@@ -214,7 +253,11 @@ export default function App() {
 
   const handleAddTable = useCallback(async () => {
     const newTable: TableModel = {
-      id: makeId('tbl'), name: `NewTable_${model.tables.length + 1}`, x: 0, y: 0, columns: [],
+      id: makeId('tbl'),
+      name: `NewTable_${model.tables.length + 1}`,
+      x: 0,
+      y: 0,
+      columns: [],
     }
     setModel(m => ({ ...m, tables: [...m.tables, newTable] }))
     setSelectedId(newTable.id)
@@ -227,7 +270,7 @@ export default function App() {
   }, [])
 
   const handleDeleteTable = useCallback((id: string) => {
-    if (!window.confirm('Удалить эту таблицу?')) return
+    if (!window.confirm('Удалить эту таблицу? Действие нельзя отменить.')) return
     setModel((m) => ({
       ...m,
       tables: m.tables
@@ -236,7 +279,8 @@ export default function App() {
           ...t,
           columns: t.columns.map((c) =>
             c.refTable && m.tables.find((rt) => rt.id === id)?.name === c.refTable
-              ? { ...c, isFK: false, refTable: undefined, refColumn: undefined } : c
+              ? { ...c, isFK: false, refTable: undefined, refColumn: undefined }
+              : c
           ),
         })),
     }))
@@ -244,7 +288,7 @@ export default function App() {
   }, [])
 
   const handleClearCanvas = useCallback(() => {
-    if (!window.confirm('Очистить холст?')) return
+    if (!window.confirm('Очистить весь холст? Все таблицы будут удалены безвозвратно.')) return
     setModel(emptyModel())
     clearModel()
     setSelectedId(null)
@@ -252,7 +296,8 @@ export default function App() {
   }, [])
 
   const handleAnalyzeCollisions = useCallback(() => {
-    setModal({ kind: 'collisions', issues: analyzeCollisions(activeTables) })
+    const issues = analyzeCollisions(activeTables)
+    setModal({ kind: 'collisions', issues })
   }, [activeTables])
 
   const handleRelayout = useCallback(async () => {
@@ -269,14 +314,26 @@ export default function App() {
     }))
   }, [activeTables, activeTab])
 
-  const handleHighlight = useCallback((tableIds: string[]) => { setHighlightedTableIds(new Set(tableIds)) }, [])
-  function closeModal() { setModal({ kind: 'none' }); setHighlightedTableIds(new Set()) }
-  
+  const handleHighlight = useCallback((tableIds: string[]) => {
+    setHighlightedTableIds(new Set(tableIds))
+  }, [])
+
+  function closeModal() {
+    setModal({ kind: 'none' })
+    setHighlightedTableIds(new Set())
+  }
+
   function handleExportExcel() {
     const data = generateExcel(model.tables)
-    const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const blob = new Blob([data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
     const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href = url; a.download = 'model.xlsx'; a.click(); URL.revokeObjectURL(url)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'model.xlsx'
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   const emptyLayout: LayoutState = { positions: {}, edgeBends: {} }
@@ -284,47 +341,117 @@ export default function App() {
   return (
     <div className="flex h-screen flex-col bg-[#F8FAFC]">
       <TopBar
-        onImportS2T={handleImportS2T} onImportExcel={handleImportExcel} onImportCSV={handleImportCSV}
-        onExportDDL={() => setModal({ kind: 'text-export', title: 'Экспорт DDL', content: generateDDL(model.tables) })}
-        onExportS2T={() => setModal({ kind: 'text-export', title: 'Экспорт S2T', content: generateS2T(model.tables), fileName: 'model.s2t' })}
-        onExportAIPrompt={() => setModal({ kind: 'text-export', title: 'Экспорт AI-промпта', content: generateAIPrompt(model.tables) })}
-        onExportExcel={handleExportExcel} onClearCanvas={handleClearCanvas} onToggleSidebar={() => setSidebarOpen((v) => !v)}
+        onImportS2T={handleImportS2T}
+        onImportExcel={handleImportExcel}
+        onImportCSV={handleImportCSV}
+        onExportDDL={() =>
+          setModal({ kind: 'text-export', title: 'Экспорт DDL', content: generateDDL(model.tables) })
+        }
+        onExportS2T={() =>
+          setModal({
+            kind: 'text-export',
+            title: 'Экспорт S2T',
+            content: generateS2T(model.tables),
+            fileName: 'model.s2t',
+          })
+        }
+        onExportAIPrompt={() =>
+          setModal({
+            kind: 'text-export',
+            title: 'Экспорт AI-промпта',
+            content: generateAIPrompt(model.tables),
+          })
+        }
+        onExportExcel={handleExportExcel}
+        onExportPNG={() => canvasRef.current?.exportPng()}
+        onClearCanvas={handleClearCanvas}
+        onToggleSidebar={() => setSidebarOpen((v) => !v)}
       />
 
       <div className="relative flex flex-1 overflow-hidden">
         <Sidebar
-          tables={activeTables} selectedId={selectedId}
-          onSelect={(id) => { setSelectedId(id); setDetailEditMode(false); setSidebarOpen(false) }}
-          onEdit={(id) => { setSelectedId(id); setDetailEditMode(true); setSidebarOpen(false) }}
-          onDelete={handleDeleteTable} onAddTable={handleAddTable}
-          onAnalyzeCollisions={handleAnalyzeCollisions} onGenerateTestData={() => setModal({ kind: 'test-data' })}
-          onSqlHelper={() => setModal({ kind: 'sql-helper' })} onRelayout={handleRelayout}
-          edgeType={edgeType} onEdgeTypeChange={setEdgeType} open={sidebarOpen}
+          tables={activeTables}
+          selectedId={selectedId}
+          onSelect={(id) => {
+            setSelectedId(id)
+            setDetailEditMode(false)
+            setSidebarOpen(false)
+          }}
+          onEdit={(id) => {
+            setSelectedId(id)
+            setDetailEditMode(true)
+            setSidebarOpen(false)
+          }}
+          onDelete={handleDeleteTable}
+          onAddTable={handleAddTable}
+          onAnalyzeCollisions={handleAnalyzeCollisions}
+          onGenerateTestData={() => setModal({ kind: 'test-data' })}
+          onSqlHelper={() => setModal({ kind: 'sql-helper' })}
+          onRelayout={handleRelayout}
+          edgeType={edgeType}
+          onEdgeTypeChange={setEdgeType}
+          open={sidebarOpen}
         />
 
         <div className="flex flex-1 flex-col overflow-hidden">
-          <DiagramTabs tables={model.tables} activeTab={activeTab} onTabChange={setActiveTab} />
+          <DiagramTabs
+            tables={model.tables}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+          />
           <Canvas
-            tables={activeTables} layout={model.layouts[activeTab] || emptyLayout} selectedId={selectedId}
-            onSelect={(id) => { setSelectedId(id); setDetailEditMode(false) }}
-            onMoveTable={handleMoveTable} onEdgeBendChange={handleEdgeBendChange}
-            edgeType={edgeType} highlightedTableIds={highlightedTableIds} highlightedEdgeKeys={highlightedEdgeKeys}
-            onLoadSample={handleLoadSample} onImportClick={handleImportClick}
+            ref={canvasRef}
+            tables={activeTables}
+            layout={model.layouts[activeTab] || emptyLayout}
+            selectedId={selectedId}
+            onSelect={(id) => {
+              setSelectedId(id)
+              setDetailEditMode(false)
+            }}
+            onMoveTable={handleMoveTable}
+            onEdgeBendChange={handleEdgeBendChange}
+            edgeType={edgeType}
+            highlightedTableIds={highlightedTableIds}
+            highlightedEdgeKeys={highlightedEdgeKeys}
+            onLoadSample={handleLoadSample}
+            onImportClick={handleImportClick}
           />
         </div>
 
         {selectedTable && (
-          <DetailPanel key={selectedTable.id} table={selectedTable} allTables={model.tables}
-            startInEditMode={detailEditMode} onClose={() => setSelectedId(null)}
-            onSave={handleSaveTable} onDelete={handleDeleteTable}
+          <DetailPanel
+            key={selectedTable.id}
+            table={selectedTable}
+            allTables={model.tables}
+            startInEditMode={detailEditMode}
+            onClose={() => setSelectedId(null)}
+            onSave={handleSaveTable}
+            onDelete={handleDeleteTable}
           />
         )}
       </div>
 
-      {modal.kind === 'collisions' && <CollisionsModal issues={modal.issues} onClose={closeModal} onHighlight={handleHighlight} />}
-      {modal.kind === 'test-data' && <TestDataModal tables={activeTables} onClose={closeModal} />}
-      {modal.kind === 'sql-helper' && <SqlHelperModal tables={activeTables} onClose={closeModal} />}
-      {modal.kind === 'text-export' && <TextExportModal title={modal.title} content={modal.content} fileName={modal.fileName} onClose={closeModal} />}
+      {modal.kind === 'collisions' && (
+        <CollisionsModal
+          issues={modal.issues}
+          onClose={closeModal}
+          onHighlight={handleHighlight}
+        />
+      )}
+      {modal.kind === 'test-data' && (
+        <TestDataModal tables={activeTables} onClose={closeModal} />
+      )}
+      {modal.kind === 'sql-helper' && (
+        <SqlHelperModal tables={activeTables} onClose={closeModal} />
+      )}
+      {modal.kind === 'text-export' && (
+        <TextExportModal
+          title={modal.title}
+          content={modal.content}
+          fileName={modal.fileName}
+          onClose={closeModal}
+        />
+      )}
     </div>
   )
 }
