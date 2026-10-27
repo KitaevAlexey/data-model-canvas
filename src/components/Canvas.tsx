@@ -13,12 +13,14 @@ import '@xyflow/react/dist/style.css'
 
 import type { TableModel } from '../lib/types'
 import TableNode from './TableNode'
+import EditableEdge from './EditableEdge'
 
 interface CanvasProps {
   tables: TableModel[]
   selectedId: string | null
   onSelect: (id: string) => void
   onMoveTable: (id: string, x: number, y: number) => void
+  onEdgeBendChange: (edgeKey: string, bendY: number) => void
   highlightedTableIds: Set<string>
   highlightedEdgeKeys: Set<string>
   onLoadSample: () => void
@@ -26,18 +28,14 @@ interface CanvasProps {
 }
 
 const nodeTypes = { table: TableNode }
-
-const defaultEdgeOptions = {
-  type: 'smoothstep', // Красивые ортогональные скругленные линии
-  animated: false,
-  style: { strokeWidth: 2, stroke: '#94A3B8' },
-}
+const edgeTypes = { editable: EditableEdge }
 
 export default function Canvas({
   tables,
   selectedId,
   onSelect,
   onMoveTable,
+  onEdgeBendChange,
   highlightedTableIds,
   highlightedEdgeKeys,
   onLoadSample,
@@ -46,7 +44,6 @@ export default function Canvas({
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
 
-  // Синхронизация входящих данных с состоянием React Flow
   useEffect(() => {
     const newNodes: Node[] = tables.map((t) => ({
       id: t.id,
@@ -68,7 +65,11 @@ export default function Canvas({
               id: edgeKey,
               source: t.id,
               target: target.id,
-              ...defaultEdgeOptions,
+              type: 'editable',
+              data: {
+                bendY: c.edgeBendY,
+                onBendChange: onEdgeBendChange,
+              },
               style: {
                 strokeWidth: 2,
                 stroke: isError ? '#EF4444' : '#94A3B8',
@@ -82,10 +83,8 @@ export default function Canvas({
 
     setNodes(newNodes)
     setEdges(newEdges)
-  }, [tables, highlightedTableIds, highlightedEdgeKeys, selectedId, setNodes, setEdges])
+  }, [tables, highlightedTableIds, highlightedEdgeKeys, selectedId, onEdgeBendChange, setNodes, setEdges])
 
-  // Обновляем координаты в родительском состоянии только после окончания перетаскивания.
-  // React Flow передает нативные MouseEvent | TouchEvent, а не React-события.
   const onNodeDragStop = useCallback(
     (_: MouseEvent | TouchEvent, node: Node) => {
       onMoveTable(node.id, node.position.x, node.position.y)
@@ -93,7 +92,6 @@ export default function Canvas({
     [onMoveTable]
   )
 
-  // Обработка клика по узлу
   const onNodeClick = useCallback(
     (_: React.MouseEvent, node: Node) => {
       onSelect(node.id)
@@ -107,19 +105,11 @@ export default function Canvas({
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 px-4 text-center bg-white/80 backdrop-blur-sm">
           <p className="max-w-sm text-[15px] text-slate-500">Загрузите модель данных, чтобы начать</p>
           <div className="flex flex-wrap justify-center gap-3">
-            <button onClick={() => onImportClick('s2t')} className="rounded-md bg-[#1E3A5F] px-4 py-2 text-[14px] font-medium text-white hover:opacity-90">
-              Загрузить S2T
-            </button>
-            <button onClick={() => onImportClick('excel')} className="rounded-md bg-[#1E3A5F] px-4 py-2 text-[14px] font-medium text-white hover:opacity-90">
-              Загрузить Excel
-            </button>
-            <button onClick={() => onImportClick('csv')} className="rounded-md bg-[#1E3A5F] px-4 py-2 text-[14px] font-medium text-white hover:opacity-90">
-              Загрузить CSV
-            </button>
+            <button onClick={() => onImportClick('s2t')} className="rounded-md bg-[#1E3A5F] px-4 py-2 text-[14px] font-medium text-white hover:opacity-90">Загрузить S2T</button>
+            <button onClick={() => onImportClick('excel')} className="rounded-md bg-[#1E3A5F] px-4 py-2 text-[14px] font-medium text-white hover:opacity-90">Загрузить Excel</button>
+            <button onClick={() => onImportClick('csv')} className="rounded-md bg-[#1E3A5F] px-4 py-2 text-[14px] font-medium text-white hover:opacity-90">Загрузить CSV</button>
           </div>
-          <button onClick={onLoadSample} className="text-[13px] text-[#3B82F6] underline hover:opacity-80">
-            Загрузить пример модели
-          </button>
+          <button onClick={onLoadSample} className="text-[13px] text-[#3B82F6] underline hover:opacity-80">Загрузить пример модели</button>
         </div>
       )}
 
@@ -131,11 +121,12 @@ export default function Canvas({
         onNodeDragStop={onNodeDragStop}
         onNodeClick={onNodeClick}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         fitView
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.1}
         maxZoom={2}
-        proOptions={{ hideAttribution: true }} // Скрываем логотип ReactFlow
+        proOptions={{ hideAttribution: true }}
       >
         <Background color="#E2E8F0" gap={20} size={1} />
         <Controls />

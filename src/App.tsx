@@ -61,8 +61,14 @@ export default function App() {
     return keys
   }, [modal, highlightedTableIds, model.tables])
 
-  const applyImportedTables = useCallback((tables: TableModel[]) => {
-    setModel((m) => ({ tables: layoutGrid([...m.tables, ...tables]) }))
+  const applyImportedTables = useCallback(async (newTables: TableModel[]) => {
+    setModel((m) => {
+      const combined = [...m.tables, ...newTables]
+      layoutGrid(combined).then((laidOut) => {
+        setModel({ tables: laidOut })
+      })
+      return m // Возвращаем текущее состояние, пока идет расчет
+    })
   }, [])
 
   const handleImportS2T = useCallback(
@@ -116,12 +122,9 @@ export default function App() {
     [applyImportedTables]
   )
 
-  const handleLoadSample = useCallback(() => {
-    setModel({ tables: layoutGrid(buildSampleModel()) })
-  }, [])
-
-  const handleRelayout = useCallback(() => {
-  setModel((m) => ({ tables: layoutGrid(m.tables) }))
+  const handleLoadSample = useCallback(async () => {
+    const laidOut = await layoutGrid(buildSampleModel())
+    setModel({ tables: laidOut })
   }, [])
 
   const handleImportClick = useCallback(
@@ -145,7 +148,22 @@ export default function App() {
     setModel((m) => ({ tables: m.tables.map((t) => (t.id === id ? { ...t, x, y } : t)) }))
   }, [])
 
-  const handleAddTable = useCallback(() => {
+  const handleEdgeBendChange = useCallback((edgeKey: string, newBendY: number) => {
+    const [tableId, colId] = edgeKey.split(':')
+    setModel((m) => ({
+      tables: m.tables.map((t) => {
+        if (t.id !== tableId) return t
+        return {
+          ...t,
+          columns: t.columns.map((c) =>
+            c.id === colId ? { ...c, edgeBendY: newBendY } : c
+          ),
+        }
+      }),
+    }))
+  }, [])
+
+  const handleAddTable = useCallback(async () => {
     const newTable: TableModel = {
       id: makeId('tbl'),
       name: `NewTable_${model.tables.length + 1}`,
@@ -153,10 +171,11 @@ export default function App() {
       y: 0,
       columns: [],
     }
-    setModel((m) => ({ tables: layoutGrid([...m.tables, newTable]) }))
+    const laidOut = await layoutGrid([...model.tables, newTable])
+    setModel({ tables: laidOut })
     setSelectedId(newTable.id)
     setDetailEditMode(true)
-  }, [model.tables.length])
+  }, [model.tables])
 
   const handleSaveTable = useCallback((table: TableModel) => {
     setModel((m) => ({ tables: m.tables.map((t) => (t.id === table.id ? table : t)) }))
@@ -189,6 +208,11 @@ export default function App() {
   const handleAnalyzeCollisions = useCallback(() => {
     const issues = analyzeCollisions(model.tables)
     setModal({ kind: 'collisions', issues })
+  }, [model.tables])
+
+  const handleRelayout = useCallback(async () => {
+    const laidOut = await layoutGrid(model.tables)
+    setModel({ tables: laidOut })
   }, [model.tables])
 
   const handleHighlight = useCallback((tableIds: string[]) => {
@@ -273,6 +297,7 @@ export default function App() {
             setDetailEditMode(false)
           }}
           onMoveTable={handleMoveTable}
+          onEdgeBendChange={handleEdgeBendChange}
           highlightedTableIds={highlightedTableIds}
           highlightedEdgeKeys={highlightedEdgeKeys}
           onLoadSample={handleLoadSample}

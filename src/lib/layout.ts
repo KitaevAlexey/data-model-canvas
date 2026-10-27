@@ -1,5 +1,7 @@
-import dagre from 'dagre'
+import ELK from 'elkjs/lib/elk.bundled.js'
 import type { TableModel } from './types'
+
+const elk = new ELK()
 
 const NODE_WIDTH = 260
 const ROW_H = 26
@@ -11,48 +13,48 @@ function getNodeHeight(table: TableModel): number {
   return HEADER_H + PADDING + rows * ROW_H
 }
 
-export function layoutGrid(tables: TableModel[]): TableModel[] {
+export async function layoutGrid(tables: TableModel[]): Promise<TableModel[]> {
   if (tables.length === 0) return tables
 
-  const g = new dagre.graphlib.Graph()
-  g.setGraph({
-    rankdir: 'TB', // Top to Bottom: Измерения сверху, факты снизу
-    nodesep: 120,  // Горизонтальный отступ между таблицами
-    ranksep: 160,  // Вертикальный отступ между слоями
-    marginx: 60,
-    marginy: 60,
-  })
-  g.setDefaultEdgeLabel(() => ({}))
-
-  // Добавляем узлы
-  for (const t of tables) {
-    g.setNode(t.name, { width: NODE_WIDTH, height: getNodeHeight(t) })
+  const graph = {
+    id: 'root',
+    layoutOptions: {
+      'elk.algorithm': 'layered',
+      'elk.direction': 'DOWN',
+      'elk.spacing.nodeNode': '120',           // Горизонтальный отступ
+      'elk.layered.spacing.nodeNodeBetweenLayers': '180', // Вертикальный отступ
+      'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+      'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+      'elk.edgeRouting': 'ORTHOGONAL',         // <-- МАГИЯ: линии идут под прямым углом, обходя друг друга
+    },
+    children: tables.map((t) => ({
+      id: t.name,
+      width: NODE_WIDTH,
+      height: getNodeHeight(t),
+    })),
+    edges: tables.flatMap((t) =>
+      t.columns
+        .filter((c) => c.isFK && c.refTable && tables.some((tgt) => tgt.name === c.refTable))
+        .map((c) => ({
+          id: `${t.name}-${c.refTable}-${c.id}`,
+          sources: [t.name],
+          targets: [c.refTable],
+        }))
+    ),
   }
 
-  // Добавляем связи (FK)
-  for (const t of tables) {
-    for (const c of t.columns) {
-      if (c.isFK && c.refTable) {
-        // Проверяем, что таблица-цель существует в графе
-        if (tables.some((target) => target.name === c.refTable)) {
-          g.setEdge(t.name, c.refTable)
-        }
+  try {
+    const layout = await elk.layout(graph)
+    return tables.map((t) => {
+      const node = layout.children?.find((n) => n.id === t.name)
+      return {
+        ...t,
+        x: node?.x || 0,
+        y: node?.y || 0,
       }
-    }
+    })
+  } catch (err) {
+    console.error('ELK layout failed:', err)
+    return tables
   }
-
-  // Считаем раскладку
-  dagre.layout(g)
-
-  // Применяем новые координаты к таблицам
-  return tables.map((t) => {
-    const nodeInfo = g.node(t.name)
-    // Dagre возвращает координаты центра узла. 
-    // Переводим их в левый верхний угол для React Flow
-    return {
-      ...t,
-      x: nodeInfo.x - NODE_WIDTH / 2,
-      y: nodeInfo.y - getNodeHeight(t) / 2,
-    }
-  })
 }
