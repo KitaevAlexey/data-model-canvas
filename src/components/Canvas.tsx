@@ -62,13 +62,15 @@ const CanvasInner = forwardRef<CanvasRef, CanvasProps>(({
   useImperativeHandle(ref, () => ({
     exportPng: () => {
       const nodesBounds = getNodesBounds(getNodes())
+      
       // Делаем отступы вокруг схемы, чтобы она не обрезалась
       const padding = 100
       const width = nodesBounds.width + padding * 2
       const height = nodesBounds.height + padding * 2
 
-      // Рассчитываем viewport, чтобы все таблицы влезли в кадр
-      const viewport = getViewportForBounds(nodesBounds, width, height, 0.5, 2)
+      // Рассчитываем viewport, чтобы все таблицы влезли в кадр.
+      // 6-й аргумент (padding) передаем как 0, так как мы уже учли его в width/height
+      const viewport = getViewportForBounds(nodesBounds, width, height, 0.5, 2, 0)
 
       const viewportElement = document.querySelector('.react-flow__viewport') as HTMLElement
       if (!viewportElement) return
