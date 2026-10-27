@@ -21,11 +21,11 @@ export async function layoutGrid(tables: TableModel[]): Promise<TableModel[]> {
     layoutOptions: {
       'elk.algorithm': 'layered',
       'elk.direction': 'DOWN',
-      'elk.spacing.nodeNode': '120',           // Горизонтальный отступ
-      'elk.layered.spacing.nodeNodeBetweenLayers': '180', // Вертикальный отступ
+      'elk.spacing.nodeNode': '120',           
+      'elk.layered.spacing.nodeNodeBetweenLayers': '180', 
       'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
       'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
-      'elk.edgeRouting': 'ORTHOGONAL',         // <-- МАГИЯ: линии идут под прямым углом, обходя друг друга
+      'elk.edgeRouting': 'ORTHOGONAL',         
     },
     children: tables.map((t) => ({
       id: t.name,
@@ -38,7 +38,8 @@ export async function layoutGrid(tables: TableModel[]): Promise<TableModel[]> {
         .map((c) => ({
           id: `${t.name}-${c.refTable}-${c.id}`,
           sources: [t.name],
-          targets: [c.refTable],
+          // Исправление TS: добавляем "as string", так как мы уже отфильтровали undefined выше
+          targets: [c.refTable as string],
         }))
     ),
   }
