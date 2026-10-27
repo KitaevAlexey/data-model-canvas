@@ -26,7 +26,8 @@ export default function EditableEdge({
   const defaultBendY = (sourceY + targetY) / 2
   const [bendY, setBendY] = useState<number>(currentBendY ?? defaultBendY)
 
-  const [edgePath, labelX, labelY] = getSmoothStepPath({
+  // Убрали labelY из деструктуризации, так как используем bendY
+  const [edgePath, labelX] = getSmoothStepPath({
     sourceX,
     sourceY,
     sourcePosition,
