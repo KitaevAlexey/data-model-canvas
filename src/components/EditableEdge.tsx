@@ -31,10 +31,9 @@ export default function EditableEdge(props: EdgeProps) {
 
   let edgePath = ''
   let labelX = 0
-  let labelY = 0
 
   if (edgeType === 'smoothstep') {
-    ;[edgePath, labelX, labelY] = getSmoothStepPath({
+    ;[edgePath, labelX] = getSmoothStepPath({
       sourceX,
       sourceY,
       sourcePosition,
@@ -45,7 +44,7 @@ export default function EditableEdge(props: EdgeProps) {
       borderRadius: 8,
     })
   } else if (edgeType === 'bezier') {
-    ;[edgePath, labelX, labelY] = getBezierPath({
+    ;[edgePath, labelX] = getBezierPath({
       sourceX,
       sourceY,
       sourcePosition,
@@ -56,7 +55,7 @@ export default function EditableEdge(props: EdgeProps) {
     })
   } else {
     // straight
-    ;[edgePath, labelX, labelY] = getStraightPath({
+    ;[edgePath, labelX] = getStraightPath({
       sourceX,
       sourceY,
       targetX,
