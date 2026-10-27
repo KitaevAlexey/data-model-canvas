@@ -63,13 +63,45 @@ export default function Canvas({
           if (target) {
             const edgeKey = `${t.id}:${c.id}`
             const isError = highlightedEdgeKeys.has(edgeKey)
+            
+            // --- ЛОГИКА ВЫБОРА ПОРТА ---
+            const dx = target.x - t.x
+            const dy = target.y - t.y
+            
+            let sourceHandle = 'source-bottom'
+            let targetHandle = 'target-top'
+
+            // Сравниваем расстояния, чтобы понять, как лучше соединить: по горизонтали или по вертикали
+            if (Math.abs(dx) > Math.abs(dy)) {
+              // Горизонтальная связь
+              if (dx > 0) {
+                sourceHandle = 'source-right'
+                targetHandle = 'target-left'
+              } else {
+                sourceHandle = 'source-left'
+                targetHandle = 'target-right'
+              }
+            } else {
+              // Вертикальная связь
+              if (dy > 0) {
+                sourceHandle = 'source-bottom'
+                targetHandle = 'target-top'
+              } else {
+                sourceHandle = 'source-top'
+                targetHandle = 'target-bottom'
+              }
+            }
+            // ---------------------------
+
             newEdges.push({
               id: edgeKey,
               source: t.id,
               target: target.id,
+              sourceHandle,
+              targetHandle,
               type: 'editable',
               data: {
-                edgeType, // <-- Передаем тип связи
+                edgeType,
                 bendY: c.edgeBendY,
                 onBendChange: onEdgeBendChange,
               },

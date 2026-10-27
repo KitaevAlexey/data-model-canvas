@@ -6,7 +6,6 @@ const NODE_WIDTH = 260
 const ROW_H = 26
 
 function TableNode({ data, selected }: NodeProps) {
-  // data приводим к типу TableModel
   const table = data.table as TableModel
   const isError = data.isError as boolean
 
@@ -24,8 +23,11 @@ function TableNode({ data, selected }: NodeProps) {
       }`}
       style={{ width: NODE_WIDTH }}
     >
-      {/* Верхний порт для входящих связей */}
-      <Handle type="target" position={Position.Top} className="!bg-transparent !border-none" />
+      {/* Входящие связи (Target) */}
+      <Handle id="target-top" type="target" position={Position.Top} className="!bg-transparent !border-none" />
+      <Handle id="target-bottom" type="target" position={Position.Bottom} className="!bg-transparent !border-none" />
+      <Handle id="target-left" type="target" position={Position.Left} className="!bg-transparent !border-none" />
+      <Handle id="target-right" type="target" position={Position.Right} className="!bg-transparent !border-none" />
 
       <div
         className={`truncate rounded-t-lg border-b px-3 py-2 text-[14px] font-semibold ${
@@ -58,8 +60,11 @@ function TableNode({ data, selected }: NodeProps) {
         )}
       </div>
 
-      {/* Нижний порт для исходящих связей */}
-      <Handle type="source" position={Position.Bottom} className="!bg-transparent !border-none" />
+      {/* Исходящие связи (Source) */}
+      <Handle id="source-top" type="source" position={Position.Top} className="!bg-transparent !border-none" />
+      <Handle id="source-bottom" type="source" position={Position.Bottom} className="!bg-transparent !border-none" />
+      <Handle id="source-left" type="source" position={Position.Left} className="!bg-transparent !border-none" />
+      <Handle id="source-right" type="source" position={Position.Right} className="!bg-transparent !border-none" />
     </div>
   )
 }
