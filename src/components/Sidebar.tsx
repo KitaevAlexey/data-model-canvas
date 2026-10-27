@@ -1,4 +1,4 @@
-import type { TableModel } from '../lib/types'
+import type { TableModel, EdgeType } from '../lib/types'
 
 interface SidebarProps {
   tables: TableModel[]
@@ -11,6 +11,8 @@ interface SidebarProps {
   onGenerateTestData: () => void
   onSqlHelper: () => void
   onRelayout: () => void
+  edgeType: EdgeType
+  onEdgeTypeChange: (type: EdgeType) => void
   open: boolean
 }
 
@@ -33,6 +35,8 @@ export default function Sidebar({
   onGenerateTestData,
   onSqlHelper,
   onRelayout,
+  edgeType,
+  onEdgeTypeChange,
   open,
 }: SidebarProps) {
   return (
@@ -89,19 +93,49 @@ export default function Sidebar({
           ))}
         </div>
 
-        <div className="border-t border-slate-200 px-3 py-3 space-y-2">
-          <button onClick={onRelayout} className="w-full rounded-md bg-[#1E3A5F] px-3 py-2 text-[13px] font-medium text-white hover:opacity-90">
-            Переукладка
-          </button>
-          <button onClick={onAnalyzeCollisions} className="w-full rounded-md bg-[#1E3A5F] px-3 py-2 text-[13px] font-medium text-white hover:opacity-90">
-            Анализ коллизий
-          </button>
-          <button onClick={onGenerateTestData} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50">
-            Тестовые данные
-          </button>
-          <button onClick={onSqlHelper} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50">
-            SQL-помощник
-          </button>
+        <div className="border-t border-slate-200 px-3 py-3 space-y-3">
+          {/* Блок настройки связей */}
+          <div>
+            <span className="text-[11px] font-semibold text-slate-500 uppercase mb-1 block">Тип связей</span>
+            <div className="flex bg-slate-100 rounded-md p-1">
+              <button
+                onClick={() => onEdgeTypeChange('smoothstep')}
+                className={`flex-1 text-[12px] py-1 rounded ${edgeType === 'smoothstep' ? 'bg-white shadow text-slate-800 font-medium' : 'text-slate-500 hover:text-slate-700'}`}
+                title="Ортогональные с изгибом"
+              >
+                Углы
+              </button>
+              <button
+                onClick={() => onEdgeTypeChange('bezier')}
+                className={`flex-1 text-[12px] py-1 rounded ${edgeType === 'bezier' ? 'bg-white shadow text-slate-800 font-medium' : 'text-slate-500 hover:text-slate-700'}`}
+                title="Плавные кривые"
+              >
+                Кривые
+              </button>
+              <button
+                onClick={() => onEdgeTypeChange('straight')}
+                className={`flex-1 text-[12px] py-1 rounded ${edgeType === 'straight' ? 'bg-white shadow text-slate-800 font-medium' : 'text-slate-500 hover:text-slate-700'}`}
+                title="Прямые линии"
+              >
+                Прямые
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2 pt-1">
+            <button onClick={onRelayout} className="w-full rounded-md bg-[#1E3A5F] px-3 py-2 text-[13px] font-medium text-white hover:opacity-90">
+              Переукладка
+            </button>
+            <button onClick={onAnalyzeCollisions} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50">
+              Анализ коллизий
+            </button>
+            <button onClick={onGenerateTestData} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50">
+              Тестовые данные
+            </button>
+            <button onClick={onSqlHelper} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50">
+              SQL-помощник
+            </button>
+          </div>
         </div>
       </aside>
     </>

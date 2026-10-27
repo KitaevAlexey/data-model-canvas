@@ -11,7 +11,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
-import type { TableModel } from '../lib/types'
+import type { TableModel, EdgeType } from '../lib/types'
 import TableNode from './TableNode'
 import EditableEdge from './EditableEdge'
 
@@ -21,6 +21,7 @@ interface CanvasProps {
   onSelect: (id: string) => void
   onMoveTable: (id: string, x: number, y: number) => void
   onEdgeBendChange: (edgeKey: string, bendY: number) => void
+  edgeType: EdgeType
   highlightedTableIds: Set<string>
   highlightedEdgeKeys: Set<string>
   onLoadSample: () => void
@@ -36,6 +37,7 @@ export default function Canvas({
   onSelect,
   onMoveTable,
   onEdgeBendChange,
+  edgeType,
   highlightedTableIds,
   highlightedEdgeKeys,
   onLoadSample,
@@ -67,6 +69,7 @@ export default function Canvas({
               target: target.id,
               type: 'editable',
               data: {
+                edgeType, // <-- Передаем тип связи
                 bendY: c.edgeBendY,
                 onBendChange: onEdgeBendChange,
               },
@@ -83,7 +86,7 @@ export default function Canvas({
 
     setNodes(newNodes)
     setEdges(newEdges)
-  }, [tables, highlightedTableIds, highlightedEdgeKeys, selectedId, onEdgeBendChange, setNodes, setEdges])
+  }, [tables, highlightedTableIds, highlightedEdgeKeys, selectedId, onEdgeBendChange, edgeType, setNodes, setEdges])
 
   const onNodeDragStop = useCallback(
     (_: MouseEvent | TouchEvent, node: Node) => {

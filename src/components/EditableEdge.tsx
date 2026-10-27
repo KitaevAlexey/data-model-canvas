@@ -3,40 +3,66 @@ import {
   BaseEdge,
   EdgeLabelRenderer,
   getSmoothStepPath,
+  getBezierPath,
+  getStraightPath,
   type EdgeProps,
 } from '@xyflow/react'
 
-export default function EditableEdge({
-  id,
-  sourceX,
-  sourceY,
-  targetX,
-  targetY,
-  sourcePosition,
-  targetPosition,
-  style = {},
-  markerEnd,
-  data,
-}: EdgeProps) {
-  // data.bendY - сохраненное смещение, data.onBendChange - коллбэк для сохранения
+export default function EditableEdge(props: EdgeProps) {
+  const {
+    id,
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition,
+    targetPosition,
+    style = {},
+    markerEnd,
+    data,
+  } = props
+
+  const edgeType = (data?.edgeType as string) || 'smoothstep'
   const currentBendY = data?.bendY as number | undefined
   const onBendChange = data?.onBendChange as ((id: string, y: number) => void) | undefined
 
-  // Если смещение не задано, ставим линию ровно посередине
   const defaultBendY = (sourceY + targetY) / 2
   const [bendY, setBendY] = useState<number>(currentBendY ?? defaultBendY)
 
-  // Убрали labelY из деструктуризации, так как используем bendY
-  const [edgePath, labelX] = getSmoothStepPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-    centerY: bendY, // Применяем наше смещение
-    borderRadius: 8,
-  })
+  let edgePath = ''
+  let labelX = 0
+  let labelY = 0
+
+  if (edgeType === 'smoothstep') {
+    ;[edgePath, labelX, labelY] = getSmoothStepPath({
+      sourceX,
+      sourceY,
+      sourcePosition,
+      targetX,
+      targetY,
+      targetPosition,
+      centerY: bendY,
+      borderRadius: 8,
+    })
+  } else if (edgeType === 'bezier') {
+    ;[edgePath, labelX, labelY] = getBezierPath({
+      sourceX,
+      sourceY,
+      sourcePosition,
+      targetX,
+      targetY,
+      targetPosition,
+      curvature: 0.5,
+    })
+  } else {
+    // straight
+    ;[edgePath, labelX, labelY] = getStraightPath({
+      sourceX,
+      sourceY,
+      targetX,
+      targetY,
+    })
+  }
 
   const onPointerDown = useCallback(
     (event: React.PointerEvent) => {
@@ -65,20 +91,23 @@ export default function EditableEdge({
   return (
     <>
       <BaseEdge path={edgePath} markerEnd={markerEnd} style={style} />
-      <EdgeLabelRenderer>
-        <div
-          style={{
-            position: 'absolute',
-            transform: `translate(-50%, -50%) translate(${labelX}px,${bendY}px)`,
-            pointerEvents: 'all',
-          }}
-          className="nodrag nopan cursor-ns-resize"
-          onPointerDown={onPointerDown}
-        >
-          {/* Кружок для захвата линии */}
-          <div className="w-3 h-3 bg-white border-2 border-slate-400 rounded-full hover:border-blue-500 hover:scale-125 transition-transform" />
-        </div>
-      </EdgeLabelRenderer>
+      
+      {/* Кружок для захвата показываем только для типа smoothstep */}
+      {edgeType === 'smoothstep' && (
+        <EdgeLabelRenderer>
+          <div
+            style={{
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${labelX}px,${bendY}px)`,
+              pointerEvents: 'all',
+            }}
+            className="nodrag nopan cursor-ns-resize"
+            onPointerDown={onPointerDown}
+          >
+            <div className="w-3 h-3 bg-white border-2 border-slate-400 rounded-full hover:border-blue-500 hover:scale-125 transition-transform" />
+          </div>
+        </EdgeLabelRenderer>
+      )}
     </>
   )
 }

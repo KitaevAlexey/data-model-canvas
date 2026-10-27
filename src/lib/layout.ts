@@ -1,7 +1,4 @@
-import ELK from 'elkjs/lib/elk.bundled.js'
 import type { TableModel } from './types'
-
-const elk = new ELK()
 
 const NODE_WIDTH = 260
 const ROW_H = 26
@@ -15,47 +12,133 @@ function getNodeHeight(table: TableModel): number {
 
 export async function layoutGrid(tables: TableModel[]): Promise<TableModel[]> {
   if (tables.length === 0) return tables
+  if (tables.length === 1) return [{ ...tables[0], x: 800, y: 800 }]
 
-  const graph = {
-    id: 'root',
-    layoutOptions: {
-      'elk.algorithm': 'layered',
-      'elk.direction': 'DOWN',
-      'elk.spacing.nodeNode': '120',           
-      'elk.layered.spacing.nodeNodeBetweenLayers': '180', 
-      'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
-      'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
-      'elk.edgeRouting': 'ORTHOGONAL',         
-    },
-    children: tables.map((t) => ({
-      id: t.name,
-      width: NODE_WIDTH,
-      height: getNodeHeight(t),
-    })),
-    edges: tables.flatMap((t) =>
-      t.columns
-        .filter((c) => c.isFK && c.refTable && tables.some((tgt) => tgt.name === c.refTable))
-        .map((c) => ({
-          id: `${t.name}-${c.refTable}-${c.id}`,
-          sources: [t.name],
-          // Исправление TS: добавляем "as string", так как мы уже отфильтровали undefined выше
-          targets: [c.refTable as string],
-        }))
-    ),
+  // 1. Находим центральную таблицу фактов (максимум исходящих FK)
+  let factTable = tables[0]
+  let maxFks = -1
+  for (const t of tables) {
+    const fkCount = t.columns.filter((c) => c.isFK).length
+    if (fkCount > maxFks || t.name.toLowerCase().includes('fact')) {
+      maxFks = fkCount
+      factTable = t
+    }
   }
 
-  try {
-    const layout = await elk.layout(graph)
-    return tables.map((t) => {
-      const node = layout.children?.find((n) => n.id === t.name)
-      return {
-        ...t,
-        x: node?.x || 0,
-        y: node?.y || 0,
+  // 2. Обход в ширину (BFS) для определения уровней (слоёв)
+  const levels = new Map<string, number>()
+  const parents = new Map<string, string | null>()
+  levels.set(factTable.name, 0)
+  parents.set(factTable.name, null)
+
+  const queue = [factTable.name]
+  while (queue.length > 0) {
+    const currentName = queue.shift()!
+    const currentLevel = levels.get(currentName)!
+
+    for (const t of tables) {
+      if (levels.has(t.name)) continue
+
+      // Проверяем, есть ли связь между t и currentName
+      const hasEdgeToCurrent = t.columns.some((c) => c.isFK && c.refTable === currentName)
+      const currentTableObj = tables.find((x) => x.name === currentName)
+      const currentHasEdgeTo = currentTableObj?.columns.some((c) => c.isFK && c.refTable === t.name)
+
+      if (hasEdgeToCurrent || currentHasEdgeTo) {
+        levels.set(t.name, currentLevel + 1)
+        parents.set(t.name, currentName)
+        queue.push(t.name)
       }
-    })
-  } catch (err) {
-    console.error('ELK layout failed:', err)
-    return tables
+    }
   }
+
+  // Если есть оторванные таблицы без связей — отправляем их на 3-й уровень
+  for (const t of tables) {
+    if (!levels.has(t.name)) {
+      levels.set(t.name, 3)
+      parents.set(t.name, factTable.name)
+    }
+  }
+
+  // 3. Группируем таблицы по уровням
+  const nodesByLevel = new Map<number, string[]>()
+  for (const [name, level] of levels.entries()) {
+    if (!nodesByLevel.has(level)) nodesByLevel.set(level, [])
+    nodesByLevel.get(level)!.push(name)
+  }
+
+  const positions = new Map<string, { x: number; y: number }>()
+  
+  // Центр холста
+  const CENTER_X = 1500
+  const CENTER_Y = 1500
+  const RADIUS_1 = 600  // Радиус для прямых измерений
+  const RADIUS_2 = 1200 // Радиус для измерений 2-го уровня
+
+  // 4. Ставим Факт в центр
+  positions.set(factTable.name, {
+    x: CENTER_X - NODE_WIDTH / 2,
+    y: CENTER_Y - getNodeHeight(factTable) / 2,
+  })
+
+  const angleMap = new Map<string, number>()
+
+  // 5. Расставляем 1-й уровень по кругу
+  const level1 = nodesByLevel.get(1) || []
+  const angleStep = (2 * Math.PI) / (level1.length || 1)
+
+  level1.forEach((name, i) => {
+    const angle = i * angleStep
+    angleMap.set(name, angle)
+    const table = tables.find((t) => t.name === name)!
+    
+    positions.set(name, {
+      x: CENTER_X + RADIUS_1 * Math.cos(angle) - NODE_WIDTH / 2,
+      y: CENTER_Y + RADIUS_1 * Math.sin(angle) - getNodeHeight(table) / 2,
+    })
+  })
+
+  // 6. Расставляем 2-й и последующие уровни (снежинка)
+  const maxLevel = Math.max(...Array.from(levels.values()))
+  for (let lvl = 2; lvl <= maxLevel; lvl++) {
+    const nodes = nodesByLevel.get(lvl) || []
+    const byParent = new Map<string, string[]>()
+    
+    for (const n of nodes) {
+      const p = parents.get(n)!
+      if (!byParent.has(p)) byParent.set(p, [])
+      byParent.get(p)!.push(n)
+    }
+
+    for (const [parentName, children] of byParent.entries()) {
+      let baseAngle = angleMap.get(parentName) || 0
+      
+      // Немного раздвигаем дочерние элементы вокруг угла родителя
+      const spread = Math.PI / 4
+      const step = children.length > 1 ? spread / (children.length - 1) : 0
+      
+      children.forEach((childName, i) => {
+         const angle = baseAngle - spread / 2 + i * step
+         angleMap.set(childName, angle)
+         
+         // Увеличиваем радиус для каждого следующего уровня
+         const r = RADIUS_1 + (lvl - 1) * (RADIUS_2 - RADIUS_1)
+         const table = tables.find((t) => t.name === childName)!
+         
+         positions.set(childName, {
+           x: CENTER_X + r * Math.cos(angle) - NODE_WIDTH / 2,
+           y: CENTER_Y + r * Math.sin(angle) - getNodeHeight(table) / 2,
+         })
+      })
+    }
+  }
+
+  return tables.map((t) => {
+    const pos = positions.get(t.name) || { x: 0, y: 0 }
+    return {
+      ...t,
+      x: Math.round(pos.x),
+      y: Math.round(pos.y),
+    }
+  })
 }

@@ -21,6 +21,8 @@ export interface ModelState {
   tables: TableModel[]
 }
 
+export type EdgeType = 'smoothstep' | 'straight' | 'bezier'
+
 export function makeId(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Math.random().toString(36).slice(2, 6)}`
 }

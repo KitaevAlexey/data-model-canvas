@@ -8,7 +8,7 @@ import TestDataModal from './components/modals/TestDataModal'
 import SqlHelperModal from './components/modals/SqlHelperModal'
 import TextExportModal from './components/modals/TextExportModal'
 import { loadModel, saveModel, clearModel } from './lib/storage'
-import { emptyModel, makeId, type ModelState, type TableModel } from './lib/types'
+import { emptyModel, makeId, type ModelState, type TableModel, type EdgeType } from './lib/types'
 import { parseS2T, generateS2T } from './lib/parsers/s2t'
 import { parseExcel, generateExcel } from './lib/parsers/excel'
 import { parseCSV } from './lib/parsers/csv'
@@ -32,6 +32,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [modal, setModal] = useState<ActiveModal>({ kind: 'none' })
   const [highlightedTableIds, setHighlightedTableIds] = useState<Set<string>>(new Set())
+  const [edgeType, setEdgeType] = useState<EdgeType>('smoothstep')
   const hasLoaded = useRef(false)
 
   useEffect(() => {
@@ -67,7 +68,7 @@ export default function App() {
       layoutGrid(combined).then((laidOut) => {
         setModel({ tables: laidOut })
       })
-      return m // Возвращаем текущее состояние, пока идет расчет
+      return m 
     })
   }, [])
 
@@ -286,6 +287,8 @@ export default function App() {
           onGenerateTestData={() => setModal({ kind: 'test-data' })}
           onSqlHelper={() => setModal({ kind: 'sql-helper' })}
           onRelayout={handleRelayout}
+          edgeType={edgeType}
+          onEdgeTypeChange={setEdgeType}
           open={sidebarOpen}
         />
 
@@ -298,6 +301,7 @@ export default function App() {
           }}
           onMoveTable={handleMoveTable}
           onEdgeBendChange={handleEdgeBendChange}
+          edgeType={edgeType}
           highlightedTableIds={highlightedTableIds}
           highlightedEdgeKeys={highlightedEdgeKeys}
           onLoadSample={handleLoadSample}
