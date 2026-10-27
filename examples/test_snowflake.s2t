@@ -1,0 +1,68 @@
+Table: FactSales
+  SaleID: int PK
+  DateID: int FK -> DimDate.DateID
+  CustomerID: int FK -> DimCustomer.CustomerID
+  ProductID: int FK -> DimProduct.ProductID
+  StoreID: int FK -> DimStore.StoreID
+  Quantity: int
+  Amount: decimal(12,2)
+
+Table: FactShipment
+  ShipmentID: int PK
+  DateID: int FK -> DimDate.DateID
+  ProductID: int FK -> DimProduct.ProductID
+  WarehouseID: int FK -> DimWarehouse.WarehouseID
+  CarrierID: int FK -> DimCarrier.CarrierID
+  Quantity: int
+
+Table: FactInventory
+  InventoryID: int PK
+  DateID: int FK -> DimDate.DateID
+  ProductID: int FK -> DimProduct.ProductID
+  WarehouseID: int FK -> DimWarehouse.WarehouseID
+  StockLevel: int
+
+Table: DimDate
+  DateID: int PK
+  Date: date
+  Year: int
+  Month: int
+
+Table: DimProduct
+  ProductID: int PK
+  ProductName: varchar(150)
+  Price: decimal(10,2)
+  CategoryID: int FK -> DimCategory.CategoryID
+
+Table: DimCustomer
+  CustomerID: int PK
+  FullName: varchar(150)
+  RegionID: int FK -> DimRegion.RegionID
+
+Table: DimStore
+  StoreID: int PK
+  StoreName: varchar(100)
+  CityID: int FK -> DimCity.CityID
+
+Table: DimWarehouse
+  WarehouseID: int PK
+  WarehouseName: varchar(100)
+  CityID: int FK -> DimCity.CityID
+
+Table: DimCarrier
+  CarrierID: int PK
+  CarrierName: varchar(100)
+
+Table: DimCategory
+  CategoryID: int PK
+  CategoryName: varchar(100)
+  Department: varchar(50)
+
+Table: DimRegion
+  RegionID: int PK
+  RegionName: varchar(100)
+
+Table: DimCity
+  CityID: int PK
+  CityName: varchar(100)
+  Country: varchar(50)

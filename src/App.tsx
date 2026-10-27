@@ -3,6 +3,7 @@ import TopBar from './components/TopBar'
 import Sidebar from './components/Sidebar'
 import Canvas from './components/Canvas'
 import DetailPanel from './components/DetailPanel'
+import DiagramTabs from './components/DiagramTabs'
 import CollisionsModal from './components/modals/CollisionsModal'
 import TestDataModal from './components/modals/TestDataModal'
 import SqlHelperModal from './components/modals/SqlHelperModal'
@@ -32,7 +33,8 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [modal, setModal] = useState<ActiveModal>({ kind: 'none' })
   const [highlightedTableIds, setHighlightedTableIds] = useState<Set<string>>(new Set())
-  const [edgeType, setEdgeType] = useState<EdgeType>('smoothstep')
+  const [edgeType, setEdgeType] = useState<EdgeType>('bezier')
+  const [activeTab, setActiveTab] = useState<string>('overview')
   const hasLoaded = useRef(false)
 
   useEffect(() => {
@@ -46,6 +48,39 @@ export default function App() {
     saveModel(model)
   }, [model])
 
+  // Следим, чтобы активная вкладка не "сломалась", если таблицу удалили
+  useEffect(() => {
+    if (activeTab !== 'overview' && !model.tables.some(t => t.name === activeTab)) {
+      setActiveTab('overview')
+    }
+  }, [model.tables, activeTab])
+
+  // Фильтруем таблицы для текущей вкладки
+  const activeTables = useMemo(() => {
+    if (activeTab === 'overview') return model.tables
+
+    const factTable = model.tables.find(t => t.name === activeTab)
+    if (!factTable) return model.tables
+
+    const relevantNames = new Set<string>([factTable.name])
+    
+    // 1-й уровень (прямые измерения)
+    factTable.columns.forEach(c => {
+      if (c.isFK && c.refTable) relevantNames.add(c.refTable)
+    })
+    
+    // 2-й уровень (снежинка)
+    model.tables.forEach(t => {
+      if (relevantNames.has(t.name)) {
+        t.columns.forEach(c => {
+          if (c.isFK && c.refTable) relevantNames.add(c.refTable)
+        })
+      }
+    })
+
+    return model.tables.filter(t => relevantNames.has(t.name))
+  }, [model.tables, activeTab])
+
   const selectedTable = useMemo(
     () => model.tables.find((t) => t.id === selectedId) ?? null,
     [model.tables, selectedId]
@@ -54,19 +89,20 @@ export default function App() {
   const highlightedEdgeKeys = useMemo(() => {
     if (modal.kind !== 'collisions') return new Set<string>()
     const keys = new Set<string>()
-    for (const t of model.tables) {
+    for (const t of activeTables) {
       for (const c of t.columns) {
         if (highlightedTableIds.has(t.id)) keys.add(`${t.id}:${c.id}`)
       }
     }
     return keys
-  }, [modal, highlightedTableIds, model.tables])
+  }, [modal, highlightedTableIds, activeTables])
 
   const applyImportedTables = useCallback(async (newTables: TableModel[]) => {
     setModel((m) => {
       const combined = [...m.tables, ...newTables]
       layoutGrid(combined).then((laidOut) => {
         setModel({ tables: laidOut })
+        setActiveTab('overview') // Переключаем на обзор после импорта
       })
       return m 
     })
@@ -126,6 +162,7 @@ export default function App() {
   const handleLoadSample = useCallback(async () => {
     const laidOut = await layoutGrid(buildSampleModel())
     setModel({ tables: laidOut })
+    setActiveTab('overview')
   }, [])
 
   const handleImportClick = useCallback(
@@ -176,6 +213,7 @@ export default function App() {
     setModel({ tables: laidOut })
     setSelectedId(newTable.id)
     setDetailEditMode(true)
+    setActiveTab('overview')
   }, [model.tables])
 
   const handleSaveTable = useCallback((table: TableModel) => {
@@ -204,17 +242,25 @@ export default function App() {
     setModel(emptyModel())
     clearModel()
     setSelectedId(null)
+    setActiveTab('overview')
   }, [])
 
   const handleAnalyzeCollisions = useCallback(() => {
-    const issues = analyzeCollisions(model.tables)
+    const issues = analyzeCollisions(activeTables)
     setModal({ kind: 'collisions', issues })
-  }, [model.tables])
+  }, [activeTables])
 
+  // Переукладка применяется только к активным таблицам
   const handleRelayout = useCallback(async () => {
-    const laidOut = await layoutGrid(model.tables)
-    setModel({ tables: laidOut })
-  }, [model.tables])
+    const laidOut = await layoutGrid(activeTables)
+    setModel(m => ({
+      ...m,
+      tables: m.tables.map(t => {
+        const updated = laidOut.find(u => u.id === t.id)
+        return updated ? { ...t, x: updated.x, y: updated.y } : t
+      })
+    }))
+  }, [activeTables])
 
   const handleHighlight = useCallback((tableIds: string[]) => {
     setHighlightedTableIds(new Set(tableIds))
@@ -226,7 +272,7 @@ export default function App() {
   }
 
   function handleExportExcel() {
-    const data = generateExcel(model.tables)
+    const data = generateExcel(model.tables) // Экспорт всегда всех таблиц
     const blob = new Blob([data], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     })
@@ -269,7 +315,7 @@ export default function App() {
 
       <div className="relative flex flex-1 overflow-hidden">
         <Sidebar
-          tables={model.tables}
+          tables={activeTables} // Сайдбар показывает только таблицы текущей вкладки
           selectedId={selectedId}
           onSelect={(id) => {
             setSelectedId(id)
@@ -292,27 +338,35 @@ export default function App() {
           open={sidebarOpen}
         />
 
-        <Canvas
-          tables={model.tables}
-          selectedId={selectedId}
-          onSelect={(id) => {
-            setSelectedId(id)
-            setDetailEditMode(false)
-          }}
-          onMoveTable={handleMoveTable}
-          onEdgeBendChange={handleEdgeBendChange}
-          edgeType={edgeType}
-          highlightedTableIds={highlightedTableIds}
-          highlightedEdgeKeys={highlightedEdgeKeys}
-          onLoadSample={handleLoadSample}
-          onImportClick={handleImportClick}
-        />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <DiagramTabs 
+            tables={model.tables} 
+            activeTab={activeTab} 
+            onTabChange={setActiveTab} 
+          />
+          
+          <Canvas
+            tables={activeTables} // Canvas показывает только таблицы текущей вкладки
+            selectedId={selectedId}
+            onSelect={(id) => {
+              setSelectedId(id)
+              setDetailEditMode(false)
+            }}
+            onMoveTable={handleMoveTable}
+            onEdgeBendChange={handleEdgeBendChange}
+            edgeType={edgeType}
+            highlightedTableIds={highlightedTableIds}
+            highlightedEdgeKeys={highlightedEdgeKeys}
+            onLoadSample={handleLoadSample}
+            onImportClick={handleImportClick}
+          />
+        </div>
 
         {selectedTable && (
           <DetailPanel
             key={selectedTable.id}
             table={selectedTable}
-            allTables={model.tables}
+            allTables={model.tables} // Ссылки в деталях ищем по всем таблицам
             startInEditMode={detailEditMode}
             onClose={() => setSelectedId(null)}
             onSave={handleSaveTable}
@@ -329,10 +383,10 @@ export default function App() {
         />
       )}
       {modal.kind === 'test-data' && (
-        <TestDataModal tables={model.tables} onClose={closeModal} />
+        <TestDataModal tables={activeTables} onClose={closeModal} />
       )}
       {modal.kind === 'sql-helper' && (
-        <SqlHelperModal tables={model.tables} onClose={closeModal} />
+        <SqlHelperModal tables={activeTables} onClose={closeModal} />
       )}
       {modal.kind === 'text-export' && (
         <TextExportModal
