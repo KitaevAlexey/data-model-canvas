@@ -232,9 +232,21 @@ export default function Canvas({
               }`}
               style={{ left: table.x, top: table.y, width: NODE_WIDTH }}
             >
-              <div className="truncate rounded-t-lg border-b border-slate-200 bg-slate-50 px-3 py-2 text-[14px] font-semibold text-slate-800">
-                {table.name}
-              </div>
+              {(() => {
+                const fkCount = table.columns.filter((c) => c.isFK).length
+                const isFact = fkCount >= 2 || /^fact|^fct/i.test(table.name)
+                return (
+                  <div
+                    className={`truncate rounded-t-lg border-b px-3 py-2 text-[14px] font-semibold ${
+                      isFact
+                        ? 'border-[#1E3A5F]/30 bg-[#1E3A5F] text-white'
+                        : 'border-slate-200 bg-slate-50 text-slate-800'
+                    }`}
+                  >
+                    {table.name}
+                  </div>
+                )
+              })()}    
               <div className="px-1 py-1">
                 {table.columns.map((col) => (
                   <div key={col.id} className="flex items-center gap-1.5 px-2" style={{ height: ROW_H }}>
