@@ -13,16 +13,14 @@ function generateQueries(tables: TableModel[]) {
     const fks = table.columns.filter((c) => c.isFK && c.refTable)
     const nonPK = table.columns.filter((c) => !c.isPK)
 
-    // Select with all joins
     if (fks.length > 0) {
       let sql = `SELECT *\nFROM ${table.name}`
       for (const fk of fks) {
         sql += `\n  LEFT JOIN ${fk.refTable} ON ${table.name}.${fk.name} = ${fk.refTable}.${fk.refColumn}`
       }
-      results.push({ label: `${table.name}: Select with all joins`, sql })
+      results.push({ label: `${table.name}: SELECT со всеми JOIN`, sql })
     }
 
-    // Aggregate by dimension
     if (fks.length > 0 && nonPK.some((c) => c.type.includes('int') || c.type.includes('decimal'))) {
       const numCol = nonPK.find((c) => c.type.includes('int') || c.type.includes('decimal'))
       const fk = fks[0]
@@ -32,25 +30,23 @@ function generateQueries(tables: TableModel[]) {
           const dimCol = refTable.columns.find((c) => !c.isPK)
           if (dimCol) {
             const sql = `SELECT ${fk.refTable}.${dimCol.name}, COUNT(*) AS count, SUM(${table.name}.${numCol.name}) AS total\nFROM ${table.name}\n  JOIN ${fk.refTable} ON ${table.name}.${fk.name} = ${fk.refTable}.${fk.refColumn}\nGROUP BY ${fk.refTable}.${dimCol.name}`
-            results.push({ label: `${table.name}: Aggregate by ${refTable.name}`, sql })
+            results.push({ label: `${table.name}: агрегация по ${refTable.name}`, sql })
           }
         }
       }
     }
 
-    // Find duplicates
     if (nonPK.length > 0) {
       const cols = nonPK.slice(0, 3).map((c) => c.name).join(', ')
       const sql = `SELECT ${cols}, COUNT(*) AS duplicates\nFROM ${table.name}\nGROUP BY ${cols}\nHAVING COUNT(*) > 1`
-      results.push({ label: `${table.name}: Find duplicates`, sql })
+      results.push({ label: `${table.name}: поиск дубликатов`, sql })
     }
 
-    // Referential integrity check
     if (fks.length > 0) {
       const fk = fks[0]
       if (fk.refTable && fk.refColumn) {
         const sql = `SELECT ${table.name}.*\nFROM ${table.name}\n  LEFT JOIN ${fk.refTable} ON ${table.name}.${fk.name} = ${fk.refTable}.${fk.refColumn}\nWHERE ${fk.refTable}.${fk.refColumn} IS NULL`
-        results.push({ label: `${table.name}: Orphaned rows check`, sql })
+        results.push({ label: `${table.name}: проверка ссылочной целостности`, sql })
       }
     }
   }
@@ -60,8 +56,15 @@ function generateQueries(tables: TableModel[]) {
 
 export default function SqlHelperModal({ tables, onClose }: SqlHelperModalProps) {
   const [selectedSql, setSelectedSql] = useState('')
+  const [copied, setCopied] = useState(false)
 
   const queries = generateQueries(tables)
+
+  function handleCopy() {
+    navigator.clipboard.writeText(selectedSql)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
@@ -70,18 +73,18 @@ export default function SqlHelperModal({ tables, onClose }: SqlHelperModalProps)
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-          <h3 className="text-[16px] font-semibold text-slate-800">SQL Helper</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-[18px]">✕</button>
+          <h3 className="text-[16px] font-semibold text-slate-800">SQL-помощник</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-[18px]" title="Закрыть">✕</button>
         </div>
 
         <div className="px-5 py-4 space-y-3">
           {queries.length === 0 && (
-            <p className="text-center text-[14px] text-slate-400">Add tables with relationships first</p>
+            <p className="text-center text-[14px] text-slate-400">Сначала добавьте таблицы со связями</p>
           )}
           {queries.map((q, idx) => (
             <button
               key={idx}
-              onClick={() => setSelectedSql(q.sql)}
+              onClick={() => { setSelectedSql(q.sql); setCopied(false) }}
               className="block w-full rounded-md border border-slate-200 px-3 py-2 text-left text-[13px] text-slate-700 hover:bg-slate-50"
             >
               {q.label}
@@ -94,10 +97,10 @@ export default function SqlHelperModal({ tables, onClose }: SqlHelperModalProps)
                 {selectedSql}
               </pre>
               <button
-                onClick={() => navigator.clipboard.writeText(selectedSql)}
+                onClick={handleCopy}
                 className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50"
               >
-                Copy to Clipboard
+                {copied ? 'Скопировано ✓' : 'Копировать в буфер'}
               </button>
             </>
           )}

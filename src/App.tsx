@@ -71,11 +71,10 @@ export default function App() {
       reader.onload = () => {
         try {
           const tables = parseS2T(String(reader.result ?? ''))
-          console.log('Parsed S2T tables:', tables.map((t) => t.name))
           applyImportedTables(tables)
         } catch (err) {
           console.error('S2T parse error:', err)
-          window.alert('Could not parse S2T file. Please check the format.')
+          window.alert('Не удалось разобрать S2T-файл. Проверьте формат.')
         }
       }
       reader.readAsText(file)
@@ -89,11 +88,10 @@ export default function App() {
       reader.onload = () => {
         try {
           const tables = parseExcel(reader.result as ArrayBuffer)
-          console.log('Parsed Excel tables:', tables.map((t) => t.name))
           applyImportedTables(tables)
         } catch (err) {
           console.error('Excel parse error:', err)
-          window.alert('Could not parse Excel file. Please check the format.')
+          window.alert('Не удалось разобрать Excel-файл. Проверьте формат.')
         }
       }
       reader.readAsArrayBuffer(file)
@@ -107,11 +105,10 @@ export default function App() {
       reader.onload = () => {
         try {
           const tables = parseCSV(String(reader.result ?? ''))
-          console.log('Parsed CSV tables:', tables.map((t) => t.name))
           applyImportedTables(tables)
         } catch (err) {
           console.error('CSV parse error:', err)
-          window.alert('Could not parse CSV file. Please check the format.')
+          window.alert('Не удалось разобрать CSV-файл. Проверьте формат.')
         }
       }
       reader.readAsText(file)
@@ -120,7 +117,7 @@ export default function App() {
   )
 
   const handleLoadSample = useCallback(() => {
-    setModel({ tables: buildSampleModel() })
+    setModel({ tables: layoutGrid(buildSampleModel()) })
   }, [])
 
   const handleImportClick = useCallback(
@@ -162,7 +159,7 @@ export default function App() {
   }, [])
 
   const handleDeleteTable = useCallback((id: string) => {
-    if (!window.confirm('Delete this table? This cannot be undone.')) return
+    if (!window.confirm('Удалить эту таблицу? Действие нельзя отменить.')) return
     setModel((m) => ({
       tables: m.tables
         .filter((t) => t.id !== id)
@@ -179,7 +176,7 @@ export default function App() {
   }, [])
 
   const handleClearCanvas = useCallback(() => {
-    if (!window.confirm('Clear the entire canvas? All tables will be removed permanently.')) return
+    if (!window.confirm('Очистить весь холст? Все таблицы будут удалены безвозвратно.')) return
     setModel(emptyModel())
     clearModel()
     setSelectedId(null)
@@ -219,12 +216,12 @@ export default function App() {
         onImportExcel={handleImportExcel}
         onImportCSV={handleImportCSV}
         onExportDDL={() =>
-          setModal({ kind: 'text-export', title: 'Export DDL', content: generateDDL(model.tables) })
+          setModal({ kind: 'text-export', title: 'Экспорт DDL', content: generateDDL(model.tables) })
         }
         onExportS2T={() =>
           setModal({
             kind: 'text-export',
-            title: 'Export S2T',
+            title: 'Экспорт S2T',
             content: generateS2T(model.tables),
             fileName: 'model.s2t',
           })
@@ -232,7 +229,7 @@ export default function App() {
         onExportAIPrompt={() =>
           setModal({
             kind: 'text-export',
-            title: 'Export AI Prompt',
+            title: 'Экспорт AI-промпта',
             content: generateAIPrompt(model.tables),
           })
         }

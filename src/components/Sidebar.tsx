@@ -13,6 +13,14 @@ interface SidebarProps {
   open: boolean
 }
 
+function columnsLabel(n: number): string {
+  const mod10 = n % 10
+  const mod100 = n % 100
+  if (mod10 === 1 && mod100 !== 11) return `${n} колонка`
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} колонки`
+  return `${n} колонок`
+}
+
 export default function Sidebar({
   tables,
   selectedId,
@@ -35,14 +43,14 @@ export default function Sidebar({
       >
         <div className="flex-1 overflow-y-auto px-3 py-4">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-[13px] font-semibold uppercase text-slate-400">Tables</span>
+            <span className="text-[13px] font-semibold uppercase text-slate-400">Таблицы</span>
             <button onClick={onAddTable} className="rounded-md bg-[#1E3A5F] px-3 py-1 text-[12px] font-medium text-white hover:opacity-90">
-              + Add Table
+              + Добавить
             </button>
           </div>
 
           {tables.length === 0 && (
-            <p className="py-4 text-center text-[13px] text-slate-400">No tables yet</p>
+            <p className="py-4 text-center text-[13px] text-slate-400">Пока нет таблиц</p>
           )}
 
           {tables.map((table) => (
@@ -61,33 +69,33 @@ export default function Sidebar({
                   <button
                     onClick={(e) => { e.stopPropagation(); onEdit(table.id) }}
                     className="rounded p-0.5 text-slate-400 hover:text-slate-600"
-                    title="Edit"
+                    title="Редактировать"
                   >
                     ✎
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); onDelete(table.id) }}
                     className="rounded p-0.5 text-slate-400 hover:text-red-500"
-                    title="Delete"
+                    title="Удалить"
                   >
                     ✕
                   </button>
                 </div>
               </div>
-              <span className="text-[12px] text-slate-400">{table.columns.length} columns</span>
+              <span className="text-[12px] text-slate-400">{columnsLabel(table.columns.length)}</span>
             </div>
           ))}
         </div>
 
         <div className="border-t border-slate-200 px-3 py-3 space-y-2">
           <button onClick={onAnalyzeCollisions} className="w-full rounded-md bg-[#1E3A5F] px-3 py-2 text-[13px] font-medium text-white hover:opacity-90">
-            Analyze Collisions
+            Анализ коллизий
           </button>
           <button onClick={onGenerateTestData} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50">
-            Generate Test Data
+            Тестовые данные
           </button>
           <button onClick={onSqlHelper} className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50">
-            SQL Helper
+            SQL-помощник
           </button>
         </div>
       </aside>

@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 interface TextExportModalProps {
   title: string
   content: string
@@ -6,6 +8,8 @@ interface TextExportModalProps {
 }
 
 export default function TextExportModal({ title, content, fileName, onClose }: TextExportModalProps) {
+  const [copied, setCopied] = useState(false)
+
   function handleDownload() {
     const blob = new Blob([content], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
@@ -16,6 +20,12 @@ export default function TextExportModal({ title, content, fileName, onClose }: T
     URL.revokeObjectURL(url)
   }
 
+  function handleCopy() {
+    navigator.clipboard.writeText(content)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
       <div
@@ -24,7 +34,7 @@ export default function TextExportModal({ title, content, fileName, onClose }: T
       >
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
           <h3 className="text-[16px] font-semibold text-slate-800">{title}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-[18px]">✕</button>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-[18px]" title="Закрыть">✕</button>
         </div>
 
         <div className="px-5 py-4 space-y-3">
@@ -33,17 +43,17 @@ export default function TextExportModal({ title, content, fileName, onClose }: T
           </pre>
           <div className="flex gap-2">
             <button
-              onClick={() => navigator.clipboard.writeText(content)}
+              onClick={handleCopy}
               className="flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50"
             >
-              Copy
+              {copied ? 'Скопировано ✓' : 'Копировать'}
             </button>
             {fileName && (
               <button
                 onClick={handleDownload}
                 className="flex-1 rounded-md bg-[#1E3A5F] px-3 py-2 text-[13px] font-medium text-white hover:opacity-90"
               >
-                Download
+                Скачать
               </button>
             )}
           </div>

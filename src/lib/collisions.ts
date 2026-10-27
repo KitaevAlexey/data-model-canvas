@@ -7,18 +7,22 @@ export interface CollisionIssue {
   message: string
 }
 
+function parseVarcharLength(type: string): number | null {
+  const m = /^varchar\s*\(\s*(\d+)\s*\)$/i.exec(type.trim())
+  return m ? parseInt(m[1], 10) : null
+}
+
 export function analyzeCollisions(tables: TableModel[]): CollisionIssue[] {
   const issues: CollisionIssue[] = []
   const byName = new Map(tables.map((t) => [t.name, t]))
 
   for (const table of tables) {
-    // Missing PK
     if (!table.columns.some((c) => c.isPK)) {
       issues.push({
-        kind: 'Missing PK',
+        kind: 'Нет PK',
         tables: [table.name],
         columns: [],
-        message: `Table "${table.name}" has no primary key.`,
+        message: `Таблица "${table.name}" не имеет первичного ключа.`,
       })
     }
 
@@ -28,10 +32,10 @@ export function analyzeCollisions(tables: TableModel[]): CollisionIssue[] {
       const refTable = byName.get(col.refTable)
       if (!refTable) {
         issues.push({
-          kind: 'Orphaned FK',
+          kind: 'Висячий FK',
           tables: [table.name, col.refTable],
           columns: [col.name],
-          message: `FK "${table.name}.${col.name}" references non-existent table "${col.refTable}".`,
+          message: `FK "${table.name}.${col.name}" ссылается на несуществующую таблицу "${col.refTable}".`,
         })
         continue
       }
@@ -39,27 +43,36 @@ export function analyzeCollisions(tables: TableModel[]): CollisionIssue[] {
       const refCol = refTable.columns.find((c) => c.name === col.refColumn)
       if (!refCol) {
         issues.push({
-          kind: 'Orphaned FK',
+          kind: 'Висячий FK',
           tables: [table.name, refTable.name],
           columns: [col.name, col.refColumn],
-          message: `FK "${table.name}.${col.name}" references non-existent column "${refTable.name}.${col.refColumn}".`,
+          message: `FK "${table.name}.${col.name}" ссылается на несуществующую колонку "${refTable.name}.${col.refColumn}".`,
         })
         continue
       }
 
-      // Type mismatch
       if (col.type !== refCol.type) {
         issues.push({
-          kind: 'Type mismatch',
+          kind: 'Несовпадение типов',
           tables: [table.name, refTable.name],
           columns: [col.name, refCol.name],
-          message: `FK "${table.name}.${col.name}" (${col.type}) does not match PK "${refTable.name}.${refCol.name}" (${refCol.type}).`,
+          message: `FK "${table.name}.${col.name}" (${col.type}) не совпадает по типу с PK "${refTable.name}.${refCol.name}" (${refCol.type}).`,
         })
+      } else {
+        const fkLen = parseVarcharLength(col.type)
+        const pkLen = parseVarcharLength(refCol.type)
+        if (fkLen !== null && pkLen !== null && fkLen !== pkLen) {
+          issues.push({
+            kind: 'Разная длина VARCHAR',
+            tables: [table.name, refTable.name],
+            columns: [col.name, refCol.name],
+            message: `FK "${table.name}.${col.name}" имеет varchar(${fkLen}), а PK "${refTable.name}.${refCol.name}" — varchar(${pkLen}).`,
+          })
+        }
       }
     }
   }
 
-  // Circular FK detection
   for (const table of tables) {
     for (const col of table.columns) {
       if (!col.isFK || !col.refTable) continue
@@ -69,10 +82,10 @@ export function analyzeCollisions(tables: TableModel[]): CollisionIssue[] {
       while (current && depth < 10) {
         if (current === table.name) {
           issues.push({
-            kind: 'Circular FK',
+            kind: 'Циклический FK',
             tables: [table.name],
             columns: [col.name],
-            message: `FK "${table.name}.${col.name}" creates a circular reference chain.`,
+            message: `FK "${table.name}.${col.name}" создаёт циклическую цепочку ссылок.`,
           })
           break
         }

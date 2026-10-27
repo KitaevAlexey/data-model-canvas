@@ -22,16 +22,12 @@ function generateInserts(tables: TableModel[], rowCount: number): string {
   const pkValues = new Map<string, number[]>()
   const result: string[] = []
 
-  // Generate PK values first
   for (const table of tables) {
     const pks: number[] = []
-    for (let i = 1; i <= rowCount; i++) {
-      pks.push(i)
-    }
+    for (let i = 1; i <= rowCount; i++) pks.push(i)
     pkValues.set(table.name, pks)
   }
 
-  // Generate INSERTs
   for (const table of tables) {
     const pk = pkValues.get(table.name)!
     for (let r = 0; r < rowCount; r++) {
@@ -71,10 +67,18 @@ export default function TestDataModal({ tables, onClose }: TestDataModalProps) {
   const [rowCount, setRowCount] = useState(100)
   const [sql, setSql] = useState('')
   const [generated, setGenerated] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   function handleGenerate() {
     setSql(generateInserts(tables, rowCount))
     setGenerated(true)
+    setCopied(false)
+  }
+
+  function handleCopy() {
+    navigator.clipboard.writeText(sql)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   return (
@@ -84,13 +88,13 @@ export default function TestDataModal({ tables, onClose }: TestDataModalProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-          <h3 className="text-[16px] font-semibold text-slate-800">Generate Test Data</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-[18px]">✕</button>
+          <h3 className="text-[16px] font-semibold text-slate-800">Генерация тестовых данных</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-[18px]" title="Закрыть">✕</button>
         </div>
 
         <div className="px-5 py-4 space-y-3">
-          <div className="flex items-center gap-3">
-            <label className="text-[13px] text-slate-600">Rows per table:</label>
+          <div className="flex items-center gap-3 flex-wrap">
+            <label className="text-[13px] text-slate-600">Строк на таблицу:</label>
             <input
               type="number"
               min={10}
@@ -103,7 +107,7 @@ export default function TestDataModal({ tables, onClose }: TestDataModalProps) {
               onClick={handleGenerate}
               className="rounded-md bg-[#1E3A5F] px-4 py-1.5 text-[13px] font-medium text-white hover:opacity-90"
             >
-              Generate
+              Сгенерировать
             </button>
           </div>
 
@@ -113,10 +117,10 @@ export default function TestDataModal({ tables, onClose }: TestDataModalProps) {
                 {sql}
               </pre>
               <button
-                onClick={() => navigator.clipboard.writeText(sql)}
+                onClick={handleCopy}
                 className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50"
               >
-                Copy to Clipboard
+                {copied ? 'Скопировано ✓' : 'Копировать в буфер'}
               </button>
             </>
           )}

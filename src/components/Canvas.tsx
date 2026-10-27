@@ -149,20 +149,20 @@ export default function Canvas({
     >
       {tables.length === 0 && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 px-4 text-center">
-          <p className="max-w-sm text-[15px] text-slate-500">Import your data model to get started</p>
+          <p className="max-w-sm text-[15px] text-slate-500">Загрузите модель данных, чтобы начать</p>
           <div className="flex flex-wrap justify-center gap-3">
             <button onClick={() => onImportClick('s2t')} className="rounded-md bg-[#1E3A5F] px-4 py-2 text-[14px] font-medium text-white hover:opacity-90">
-              Import S2T
+              Загрузить S2T
             </button>
             <button onClick={() => onImportClick('excel')} className="rounded-md bg-[#1E3A5F] px-4 py-2 text-[14px] font-medium text-white hover:opacity-90">
-              Import Excel
+              Загрузить Excel
             </button>
             <button onClick={() => onImportClick('csv')} className="rounded-md bg-[#1E3A5F] px-4 py-2 text-[14px] font-medium text-white hover:opacity-90">
-              Import CSV
+              Загрузить CSV
             </button>
           </div>
           <button onClick={onLoadSample} className="text-[13px] text-[#3B82F6] underline hover:opacity-80">
-            Load Sample Model
+            Загрузить пример модели
           </button>
         </div>
       )}
@@ -239,12 +239,12 @@ export default function Canvas({
                 {table.columns.map((col) => (
                   <div key={col.id} className="flex items-center gap-1.5 px-2" style={{ height: ROW_H }}>
                     {col.isPK && (
-                      <span className="rounded bg-[#F59E0B] px-1 text-[10px] font-bold leading-4 text-slate-900" title="Primary Key">
+                      <span className="rounded bg-[#F59E0B] px-1 text-[10px] font-bold leading-4 text-slate-900" title="Первичный ключ">
                         🔑
                       </span>
                     )}
                     {col.isFK && (
-                      <span className="rounded bg-[#3B82F6] px-1 text-[10px] font-bold leading-4 text-white" title="Foreign Key">
+                      <span className="rounded bg-[#3B82F6] px-1 text-[10px] font-bold leading-4 text-white" title="Внешний ключ">
                         🔗
                       </span>
                     )}
@@ -253,7 +253,7 @@ export default function Canvas({
                   </div>
                 ))}
                 {table.columns.length === 0 && (
-                  <div className="px-2 py-1 text-[12px] italic text-slate-400">No columns</div>
+                  <div className="px-2 py-1 text-[12px] italic text-slate-400">Нет колонок</div>
                 )}
               </div>
             </div>

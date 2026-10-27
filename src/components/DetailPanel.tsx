@@ -56,14 +56,14 @@ export default function DetailPanel({
         <div className="flex gap-1 ml-2 shrink-0">
           {editMode ? (
             <button onClick={handleSave} className="rounded px-2 py-1 text-[13px] font-medium text-white bg-[#1E3A5F] hover:opacity-90">
-              Save
+              Сохранить
             </button>
           ) : (
-            <button onClick={() => setEditMode(true)} className="rounded px-2 py-1 text-[13px] text-slate-500 hover:text-slate-700">
+            <button onClick={() => setEditMode(true)} className="rounded px-2 py-1 text-[13px] text-slate-500 hover:text-slate-700" title="Редактировать">
               ✎
             </button>
           )}
-          <button onClick={onClose} className="rounded px-2 py-1 text-[13px] text-slate-400 hover:text-slate-600">
+          <button onClick={onClose} className="rounded px-2 py-1 text-[13px] text-slate-400 hover:text-slate-600" title="Закрыть">
             ✕
           </button>
         </div>
@@ -72,7 +72,7 @@ export default function DetailPanel({
       <div className="flex-1 overflow-y-auto px-4 py-3">
         {editMode && (
           <button onClick={addColumn} className="mb-3 w-full rounded-md border border-dashed border-slate-300 px-3 py-2 text-[13px] text-slate-500 hover:bg-slate-50">
-            + Add Column
+            + Добавить колонку
           </button>
         )}
 
@@ -83,16 +83,16 @@ export default function DetailPanel({
                 <input
                   value={col.name}
                   onChange={(e) => updateColumn(index, { name: e.target.value })}
-                  placeholder="Column name"
+                  placeholder="Имя колонки"
                   className="w-full rounded border border-slate-300 px-2 py-1 text-[13px]"
                 />
                 <input
                   value={col.type}
                   onChange={(e) => updateColumn(index, { type: e.target.value })}
-                  placeholder="Type"
+                  placeholder="Тип данных"
                   className="w-full rounded border border-slate-300 px-2 py-1 text-[13px] font-mono"
                 />
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <label className="flex items-center gap-1 text-[12px]">
                     <input
                       type="checkbox"
@@ -105,20 +105,32 @@ export default function DetailPanel({
                     <input
                       type="checkbox"
                       checked={col.isFK}
-                      onChange={(e) => updateColumn(index, { isFK: e.target.checked })}
+                      onChange={(e) => {
+                        const checked = e.target.checked
+                        if (!checked) {
+                          updateColumn(index, { isFK: false, refTable: undefined, refColumn: undefined })
+                        } else {
+                          updateColumn(index, { isFK: true })
+                        }
+                      }}
                     />
                     FK
                   </label>
                   {col.isFK && (
                     <select
-                      value={`${col.refTable || ''}.${col.refColumn || ''}`}
+                      value={col.refTable && col.refColumn ? `${col.refTable}.${col.refColumn}` : ''}
                       onChange={(e) => {
-                        const [refTable, refColumn] = e.target.value.split('.')
-                        updateColumn(index, { refTable, refColumn })
+                        const val = e.target.value
+                        if (!val) {
+                          updateColumn(index, { refTable: undefined, refColumn: undefined })
+                        } else {
+                          const [refTable, refColumn] = val.split('.')
+                          updateColumn(index, { refTable, refColumn })
+                        }
                       }}
-                      className="rounded border border-slate-300 px-1 py-1 text-[12px]"
+                      className="rounded border border-slate-300 px-1 py-1 text-[12px] flex-1 min-w-0"
                     >
-                      <option value=".">Select reference...</option>
+                      <option value="">Выберите ссылку…</option>
                       {otherTables.map((t) =>
                         t.columns
                           .filter((c) => c.isPK)
@@ -130,15 +142,15 @@ export default function DetailPanel({
                       )}
                     </select>
                   )}
-                  <button onClick={() => removeColumn(index)} className="ml-auto text-red-400 hover:text-red-600 text-[16px]">
+                  <button onClick={() => removeColumn(index)} className="ml-auto text-red-400 hover:text-red-600 text-[16px]" title="Удалить колонку">
                     ✕
                   </button>
                 </div>
               </div>
             ) : (
               <div className="flex items-center gap-1.5">
-                {col.isPK && <span className="rounded bg-[#F59E0B] px-1 text-[10px] font-bold text-slate-900">🔑</span>}
-                {col.isFK && <span className="rounded bg-[#3B82F6] px-1 text-[10px] font-bold text-white">🔗</span>}
+                {col.isPK && <span className="rounded bg-[#F59E0B] px-1 text-[10px] font-bold text-slate-900" title="Первичный ключ">🔑</span>}
+                {col.isFK && <span className="rounded bg-[#3B82F6] px-1 text-[10px] font-bold text-white" title="Внешний ключ">🔗</span>}
                 <span className="text-[13px] text-slate-800">{col.name}</span>
                 <span className="ml-auto font-mono text-[11px] text-[#64748B]">{col.type}</span>
                 {col.isFK && col.refTable && col.refColumn && (
@@ -150,7 +162,7 @@ export default function DetailPanel({
         ))}
 
         {columns.length === 0 && (
-          <p className="py-4 text-center text-[13px] text-slate-400">No columns</p>
+          <p className="py-4 text-center text-[13px] text-slate-400">Нет колонок</p>
         )}
       </div>
 
@@ -159,7 +171,7 @@ export default function DetailPanel({
           onClick={() => onDelete(table.id)}
           className="w-full rounded-md border border-red-200 bg-white px-3 py-2 text-[13px] font-medium text-red-600 hover:bg-red-50"
         >
-          Delete Table
+          Удалить таблицу
         </button>
       </div>
     </div>
