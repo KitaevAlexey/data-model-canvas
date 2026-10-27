@@ -5,6 +5,7 @@ const NODE_WIDTH = 260
 const HEADER_H = 40
 const ROW_H = 26
 const PADDING_TOP = 8
+const PADDING_BOTTOM = 8
 
 interface CanvasProps {
   tables: TableModel[]
@@ -17,8 +18,8 @@ interface CanvasProps {
   onImportClick: (format: 's2t' | 'excel' | 'csv') => void
 }
 
-function columnPortY(colIndex: number): number {
-  return HEADER_H + PADDING_TOP + colIndex * ROW_H + ROW_H / 2
+function getTableHeight(table: TableModel): number {
+  return HEADER_H + PADDING_TOP + table.columns.length * ROW_H + PADDING_BOTTOM
 }
 
 export default function Canvas({
@@ -86,28 +87,56 @@ export default function Canvas({
   const connections = useMemo(() => {
     const lines: { key: string; d: string; error: boolean }[] = []
     for (const table of tables) {
-      table.columns.forEach((col, colIndex) => {
+      table.columns.forEach((col) => {
         if (!col.isFK || !col.refTable || !col.refColumn) return
         const target = byName.get(col.refTable)
         if (!target) return
-        const targetColIndex = target.columns.findIndex((c) => c.name === col.refColumn)
-        if (targetColIndex === -1) return
-
-        const sourceOnLeft = table.x < target.x
-        const sy = table.y + columnPortY(colIndex)
-        const ty = target.y + columnPortY(targetColIndex)
-        const sx = sourceOnLeft ? table.x + NODE_WIDTH : table.x
-        const tx = sourceOnLeft ? target.x : target.x + NODE_WIDTH
-        const curve = Math.max(60, Math.abs(tx - sx) / 3)
-        const c1x = sourceOnLeft ? sx + curve : sx - curve
-        const c2x = sourceOnLeft ? tx - curve : tx + curve
 
         const key = `${table.id}:${col.id}`
-        lines.push({
-          key,
-          d: `M ${sx} ${sy} C ${c1x} ${sy}, ${c2x} ${ty}, ${tx} ${ty}`,
-          error: highlightedEdgeKeys.has(key),
-        })
+        const error = highlightedEdgeKeys.has(key)
+
+        const isVertical = Math.abs(table.y - target.y) > 50
+
+        if (isVertical) {
+          const targetIsAbove = target.y < table.y
+          const sourceX = table.x + NODE_WIDTH / 2
+          const targetX = target.x + NODE_WIDTH / 2
+
+          const sourceY = targetIsAbove 
+            ? table.y 
+            : table.y + getTableHeight(table)
+            
+          const targetY = targetIsAbove 
+            ? target.y + getTableHeight(target) 
+            : target.y
+
+          const midY = (sourceY + targetY) / 2
+          lines.push({
+            key,
+            d: `M ${sourceX} ${sourceY} C ${sourceX} ${midY}, ${targetX} ${midY}, ${targetX} ${targetY}`,
+            error,
+          })
+        } else {
+          const colIndex = table.columns.indexOf(col)
+          const targetColIndex = target.columns.findIndex((c) => c.name === col.refColumn)
+          const sourceOnLeft = table.x < target.x
+          
+          const sy = table.y + HEADER_H + PADDING_TOP + colIndex * ROW_H + ROW_H / 2
+          const ty = target.y + HEADER_H + PADDING_TOP + (targetColIndex >= 0 ? targetColIndex : 0) * ROW_H + ROW_H / 2
+          
+          const sx = sourceOnLeft ? table.x + NODE_WIDTH : table.x
+          const tx = sourceOnLeft ? target.x : target.x + NODE_WIDTH
+          
+          const curve = Math.max(60, Math.abs(tx - sx) / 3)
+          const c1x = sourceOnLeft ? sx + curve : sx - curve
+          const c2x = sourceOnLeft ? tx - curve : tx + curve
+          
+          lines.push({
+            key,
+            d: `M ${sx} ${sy} C ${c1x} ${sy}, ${c2x} ${ty}, ${tx} ${ty}`,
+            error,
+          })
+        }
       })
     }
     return lines
@@ -118,7 +147,7 @@ export default function Canvas({
     let maxY = 600
     for (const t of tables) {
       maxX = Math.max(maxX, t.x + NODE_WIDTH + 200)
-      maxY = Math.max(maxY, t.y + HEADER_H + PADDING_TOP + t.columns.length * ROW_H + 200)
+      maxY = Math.max(maxY, t.y + getTableHeight(t) + 200)
     }
     return { width: maxX, height: maxY }
   }, [tables])
@@ -207,6 +236,9 @@ export default function Canvas({
         {tables.map((table) => {
           const isSelected = selectedId === table.id
           const isError = highlightedTableIds.has(table.id)
+          const fkCount = table.columns.filter((c) => c.isFK).length
+          const isFact = fkCount >= 2 || /^fact|^fct/i.test(table.name)
+          
           return (
             <div
               key={table.id}
@@ -232,21 +264,15 @@ export default function Canvas({
               }`}
               style={{ left: table.x, top: table.y, width: NODE_WIDTH }}
             >
-              {(() => {
-                const fkCount = table.columns.filter((c) => c.isFK).length
-                const isFact = fkCount >= 2 || /^fact|^fct/i.test(table.name)
-                return (
-                  <div
-                    className={`truncate rounded-t-lg border-b px-3 py-2 text-[14px] font-semibold ${
-                      isFact
-                        ? 'border-[#1E3A5F]/30 bg-[#1E3A5F] text-white'
-                        : 'border-slate-200 bg-slate-50 text-slate-800'
-                    }`}
-                  >
-                    {table.name}
-                  </div>
-                )
-              })()}    
+              <div
+                className={`truncate rounded-t-lg border-b px-3 py-2 text-[14px] font-semibold ${
+                  isFact
+                    ? 'border-[#1E3A5F]/30 bg-[#1E3A5F] text-white'
+                    : 'border-slate-200 bg-slate-50 text-slate-800'
+                }`}
+              >
+                {table.name}
+              </div>
               <div className="px-1 py-1">
                 {table.columns.map((col) => (
                   <div key={col.id} className="flex items-center gap-1.5 px-2" style={{ height: ROW_H }}>
