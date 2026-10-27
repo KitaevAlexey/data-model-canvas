@@ -3,9 +3,7 @@ import { Handle, Position, type NodeProps } from '@xyflow/react'
 import type { TableModel } from '../lib/types'
 
 const NODE_WIDTH = 260
-const HEADER_H = 40
 const ROW_H = 26
-const PADDING_TOP = 8
 
 function TableNode({ data, selected }: NodeProps) {
   // data приводим к типу TableModel

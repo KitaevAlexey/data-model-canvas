@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect } from 'react'
 import {
   ReactFlow,
   Background,
@@ -28,7 +28,7 @@ interface CanvasProps {
 const nodeTypes = { table: TableNode }
 
 const defaultEdgeOptions = {
-  type: 'smoothstep', // Красивые ортогональные скругленные линии (как на схемах)
+  type: 'smoothstep', // Красивые ортогональные скругленные линии
   animated: false,
   style: { strokeWidth: 2, stroke: '#94A3B8' },
 }
@@ -84,9 +84,10 @@ export default function Canvas({
     setEdges(newEdges)
   }, [tables, highlightedTableIds, highlightedEdgeKeys, selectedId, setNodes, setEdges])
 
-  // Обновляем координаты в родительском состоянии только после окончания перетаскивания
+  // Обновляем координаты в родительском состоянии только после окончания перетаскивания.
+  // React Flow передает нативные MouseEvent | TouchEvent, а не React-события.
   const onNodeDragStop = useCallback(
-    (_: React.MouseEvent, node: Node) => {
+    (_: MouseEvent | TouchEvent, node: Node) => {
       onMoveTable(node.id, node.position.x, node.position.y)
     },
     [onMoveTable]
@@ -134,7 +135,7 @@ export default function Canvas({
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.1}
         maxZoom={2}
-        proOptions={{ hideAttribution: true }} // Скрываем логотип ReactFlow в правом нижнем углу
+        proOptions={{ hideAttribution: true }} // Скрываем логотип ReactFlow
       >
         <Background color="#E2E8F0" gap={20} size={1} />
         <Controls />
