@@ -70,10 +70,12 @@ export async function layoutGrid(tables: TableModel[]): Promise<TableModel[]> {
   const positions = new Map<string, { x: number; y: number }>()
   
   // Центр холста
-  const CENTER_X = 1500
-  const CENTER_Y = 1500
-  const RADIUS_1 = 600  // Радиус для прямых измерений
-  const RADIUS_2 = 1200 // Радиус для измерений 2-го уровня
+  const CENTER_X = 1200
+  const CENTER_Y = 1000
+  
+  // УМЕНЬШИЛИ РАДИУСЫ ДЛЯ КОМПАКТНОСТИ
+  const RADIUS_1 = 420  // Радиус для прямых измерений (было 600)
+  const RADIUS_2 = 800  // Радиус для измерений 2-го уровня (было 1200)
 
   // 4. Ставим Факт в центр
   positions.set(factTable.name, {
@@ -88,7 +90,8 @@ export async function layoutGrid(tables: TableModel[]): Promise<TableModel[]> {
   const angleStep = (2 * Math.PI) / (level1.length || 1)
 
   level1.forEach((name, i) => {
-    const angle = i * angleStep
+    // Начинаем с верхней точки (-PI/2), чтобы было красиво
+    const angle = i * angleStep - Math.PI / 2
     angleMap.set(name, angle)
     const table = tables.find((t) => t.name === name)!
     
