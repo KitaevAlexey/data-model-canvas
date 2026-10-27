@@ -10,6 +10,7 @@ interface SidebarProps {
   onAnalyzeCollisions: () => void
   onGenerateTestData: () => void
   onSqlHelper: () => void
+  onRelayout: () => void
   open: boolean
 }
 
@@ -31,6 +32,7 @@ export default function Sidebar({
   onAnalyzeCollisions,
   onGenerateTestData,
   onSqlHelper,
+  onRelayout,
   open,
 }: SidebarProps) {
   return (
@@ -88,6 +90,9 @@ export default function Sidebar({
         </div>
 
         <div className="border-t border-slate-200 px-3 py-3 space-y-2">
+          <button onClick={onRelayout} className="w-full rounded-md bg-[#1E3A5F] px-3 py-2 text-[13px] font-medium text-white hover:opacity-90">
+            Переукладка
+          </button>
           <button onClick={onAnalyzeCollisions} className="w-full rounded-md bg-[#1E3A5F] px-3 py-2 text-[13px] font-medium text-white hover:opacity-90">
             Анализ коллизий
           </button>

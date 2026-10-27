@@ -120,6 +120,10 @@ export default function App() {
     setModel({ tables: layoutGrid(buildSampleModel()) })
   }, [])
 
+  const handleRelayout = useCallback(() => {
+  setModel((m) => ({ tables: layoutGrid(m.tables) }))
+  }, [])
+
   const handleImportClick = useCallback(
     (format: 's2t' | 'excel' | 'csv') => {
       const input = document.createElement('input')
@@ -257,6 +261,7 @@ export default function App() {
           onAnalyzeCollisions={handleAnalyzeCollisions}
           onGenerateTestData={() => setModal({ kind: 'test-data' })}
           onSqlHelper={() => setModal({ kind: 'sql-helper' })}
+          onRelayout={handleRelayout}
           open={sidebarOpen}
         />
 
