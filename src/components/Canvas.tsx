@@ -63,13 +63,12 @@ const CanvasInner = forwardRef<CanvasRef, CanvasProps>(({
     exportPng: () => {
       const nodesBounds = getNodesBounds(getNodes())
       
-      // Делаем отступы вокруг схемы, чтобы она не обрезалась
-      const padding = 100
+      // Уменьшили отступ до 40 пикселей с каждой стороны
+      const padding = 40
       const width = nodesBounds.width + padding * 2
       const height = nodesBounds.height + padding * 2
 
-      // Рассчитываем viewport, чтобы все таблицы влезли в кадр.
-      // 6-й аргумент (padding) передаем как 0, так как мы уже учли его в width/height
+      // Рассчитываем viewport. 6-й аргумент (padding) = 0, так как мы уже учли его в width/height
       const viewport = getViewportForBounds(nodesBounds, width, height, 0.5, 2, 0)
 
       const viewportElement = document.querySelector('.react-flow__viewport') as HTMLElement
