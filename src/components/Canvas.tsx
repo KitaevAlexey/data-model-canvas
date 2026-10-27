@@ -11,12 +11,13 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
-import type { TableModel, EdgeType } from '../lib/types'
+import type { TableModel, EdgeType, LayoutState } from '../lib/types'
 import TableNode from './TableNode'
 import EditableEdge from './EditableEdge'
 
 interface CanvasProps {
   tables: TableModel[]
+  layout: LayoutState
   selectedId: string | null
   onSelect: (id: string) => void
   onMoveTable: (id: string, x: number, y: number) => void
@@ -33,6 +34,7 @@ const edgeTypes = { editable: EditableEdge }
 
 export default function Canvas({
   tables,
+  layout,
   selectedId,
   onSelect,
   onMoveTable,
@@ -47,13 +49,17 @@ export default function Canvas({
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
 
   useEffect(() => {
-    const newNodes: Node[] = tables.map((t) => ({
-      id: t.id,
-      type: 'table',
-      position: { x: t.x, y: t.y },
-      data: { table: t, isError: highlightedTableIds.has(t.id) },
-      selected: selectedId === t.id,
-    }))
+    const newNodes: Node[] = tables.map((t) => {
+      // Берем координаты из раскладки текущей вкладки, либо дефолтные
+      const pos = layout.positions[t.id] || { x: t.x, y: t.y }
+      return {
+        id: t.id,
+        type: 'table',
+        position: pos,
+        data: { table: t, isError: highlightedTableIds.has(t.id) },
+        selected: selectedId === t.id,
+      }
+    })
 
     const newEdges: Edge[] = []
     for (const t of tables) {
@@ -65,31 +71,20 @@ export default function Canvas({
             const isError = highlightedEdgeKeys.has(edgeKey)
             
             // --- ЛОГИКА ВЫБОРА ПОРТА ---
-            const dx = target.x - t.x
-            const dy = target.y - t.y
+            const posT = layout.positions[t.id] || { x: t.x, y: t.y }
+            const posTarget = layout.positions[target.id] || { x: target.x, y: target.y }
+            const dx = posTarget.x - posT.x
+            const dy = posTarget.y - posT.y
             
             let sourceHandle = 'source-bottom'
             let targetHandle = 'target-top'
 
-            // Сравниваем расстояния, чтобы понять, как лучше соединить: по горизонтали или по вертикали
             if (Math.abs(dx) > Math.abs(dy)) {
-              // Горизонтальная связь
-              if (dx > 0) {
-                sourceHandle = 'source-right'
-                targetHandle = 'target-left'
-              } else {
-                sourceHandle = 'source-left'
-                targetHandle = 'target-right'
-              }
+              if (dx > 0) { sourceHandle = 'source-right'; targetHandle = 'target-left' }
+              else { sourceHandle = 'source-left'; targetHandle = 'target-right' }
             } else {
-              // Вертикальная связь
-              if (dy > 0) {
-                sourceHandle = 'source-bottom'
-                targetHandle = 'target-top'
-              } else {
-                sourceHandle = 'source-top'
-                targetHandle = 'target-bottom'
-              }
+              if (dy > 0) { sourceHandle = 'source-bottom'; targetHandle = 'target-top' }
+              else { sourceHandle = 'source-top'; targetHandle = 'target-bottom' }
             }
             // ---------------------------
 
@@ -102,7 +97,7 @@ export default function Canvas({
               type: 'editable',
               data: {
                 edgeType,
-                bendY: c.edgeBendY,
+                bendY: layout.edgeBends[edgeKey], // Берем изгиб из раскладки
                 onBendChange: onEdgeBendChange,
               },
               style: {
@@ -118,7 +113,7 @@ export default function Canvas({
 
     setNodes(newNodes)
     setEdges(newEdges)
-  }, [tables, highlightedTableIds, highlightedEdgeKeys, selectedId, onEdgeBendChange, edgeType, setNodes, setEdges])
+  }, [tables, layout, highlightedTableIds, highlightedEdgeKeys, selectedId, onEdgeBendChange, edgeType, setNodes, setEdges])
 
   const onNodeDragStop = useCallback(
     (_: MouseEvent | TouchEvent, node: Node) => {

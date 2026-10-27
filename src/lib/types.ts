@@ -6,7 +6,7 @@ export interface Column {
   isFK: boolean
   refTable?: string
   refColumn?: string
-  edgeBendY?: number
+  edgeBendY?: number // Оставляем для обратной совместимости, но используем LayoutState
 }
 
 export interface TableModel {
@@ -17,8 +17,14 @@ export interface TableModel {
   columns: Column[]
 }
 
+export interface LayoutState {
+  positions: Record<string, { x: number; y: number }>
+  edgeBends: Record<string, number>
+}
+
 export interface ModelState {
   tables: TableModel[]
+  layouts: Record<string, LayoutState> // Ключ - имя вкладки ('overview', 'FactSales' и т.д.)
 }
 
 export type EdgeType = 'smoothstep' | 'straight' | 'bezier'
@@ -28,5 +34,5 @@ export function makeId(prefix: string): string {
 }
 
 export function emptyModel(): ModelState {
-  return { tables: [] }
+  return { tables: [], layouts: {} }
 }
