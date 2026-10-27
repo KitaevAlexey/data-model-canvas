@@ -6,6 +6,7 @@ export interface Column {
   isFK: boolean
   refTable?: string
   refColumn?: string
+  edgeBendY?: number
 }
 
 export interface TableModel {
